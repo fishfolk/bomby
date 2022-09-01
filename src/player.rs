@@ -1,18 +1,27 @@
 use bevy::prelude::*;
 
+use bevy_inspector_egui::Inspectable;
+
 pub struct PlayerPlugin;
 
-const SPEED: f32 = 100.0;
+const SPEED: f32 = 125.0;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_startup_system(spawn_player)
-            .add_system(handle_input);
+            .add_system(handle_input)
+            .add_system(animate_player);
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Inspectable, Debug)]
+pub enum PlayerAnimationState {
+    Idle,
+    Run,
+}
+
+#[derive(Component, Debug)]
 pub struct Player;
 
 fn spawn_player(mut commands: Commands, texture: Res<PlayerSheet>) {
@@ -26,26 +35,57 @@ fn spawn_player(mut commands: Commands, texture: Res<PlayerSheet>) {
             },
             ..default()
         })
-        .insert(Player);
+        .insert(Player)
+        .insert(PlayerAnimationState::Idle)
+        .insert(Name::from("Player"));
+}
+
+fn animate_player(
+    mut players: Query<(&mut TextureAtlasSprite, &PlayerAnimationState), With<Player>>,
+    time: Res<Time>,
+) {
+    use PlayerAnimationState::*;
+    const MILLIS_BETWEEN_FRAMES: u128 = 100;
+
+    for (mut sprite, animation_state) in players.iter_mut() {
+        sprite.index = match animation_state {
+            Idle => ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize,
+            Run => {
+                ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
+            }
+        }
+    }
 }
 
 fn handle_input(
-    mut player_transforms: Query<&mut Transform, With<Player>>,
+    mut players: Query<(&mut Transform, &mut PlayerAnimationState), With<Player>>,
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    for mut transform in player_transforms.iter_mut() {
+    for (mut transform, mut animation_state) in players.iter_mut() {
+        let mut delta_x = 0.0;
         if keyboard.pressed(KeyCode::D) {
-            transform.translation.x += SPEED * time.delta_seconds();
+            delta_x += 1.0;
         }
         if keyboard.pressed(KeyCode::A) {
-            transform.translation.x -= SPEED * time.delta_seconds();
+            delta_x -= 1.0;
         }
+
+        let mut delta_y = 0.0;
         if keyboard.pressed(KeyCode::W) {
-            transform.translation.y += SPEED * time.delta_seconds();
+            delta_y += 1.0;
         }
         if keyboard.pressed(KeyCode::S) {
-            transform.translation.y -= SPEED * time.delta_seconds();
+            delta_y -= 1.0;
+        }
+
+        transform.translation += Vec2::new(delta_x, delta_y).normalize_or_zero().extend(0.0)
+            * SPEED
+            * time.delta_seconds();
+
+        *animation_state = match delta_x != 0.0 || delta_y != 0.0 {
+            true => PlayerAnimationState::Run,
+            false => PlayerAnimationState::Idle,
         }
     }
 }
