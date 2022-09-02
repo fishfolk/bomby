@@ -7,6 +7,10 @@ edition = "2021"
 bevy = "0.8"
 bevy-inspector-egui = "0.12"
 
+[dependencies.bevy_ecs_ldtk]
+version = "0.4"
+git = "https://github.com/Piturnah/bevy_ecs_ldtk" 
+
 [features]
 dev = ["bevy/dynamic"]
  

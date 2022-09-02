@@ -1,6 +1,7 @@
 use bevy::{prelude::*, render::texture::ImageSettings};
 
 mod debug;
+mod ldtk;
 mod player;
 
 const RESOLUTION: f32 = 16.0 / 9.0;
@@ -20,6 +21,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
+        .add_plugin(ldtk::BombyLdtkPlugin)
         .add_startup_system(spawn_camera)
         .run();
 }
