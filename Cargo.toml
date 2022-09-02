@@ -6,10 +6,11 @@ edition = "2021"
 [dependencies]
 bevy = "0.8"
 bevy-inspector-egui = "0.12"
+iyes_loopless = "0.7"
 
 [dependencies.bevy_ecs_ldtk]
 version = "0.4"
-git = "https://github.com/Piturnah/bevy_ecs_ldtk" 
+git = "https://github.com/Piturnah/bevy_ecs_ldtk"
 
 [features]
 dev = ["bevy/dynamic"]

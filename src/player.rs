@@ -1,6 +1,10 @@
 use bevy::prelude::*;
+use bevy_ecs_ldtk::prelude::*;
+use iyes_loopless::prelude::*;
 
 use bevy_inspector_egui::Inspectable;
+
+use crate::ldtk;
 
 pub struct PlayerPlugin;
 
@@ -9,7 +13,7 @@ const SPEED: f32 = 125.0;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .add_startup_system(spawn_player)
+            .add_system(spawn_player.run_if(ldtk::level_spawned))
             .add_system(handle_input)
             .add_system(animate_player);
     }
@@ -24,10 +28,24 @@ pub enum PlayerAnimationState {
 #[derive(Component, Debug)]
 pub struct Player;
 
-fn spawn_player(mut commands: Commands, texture: Res<PlayerSheet>) {
+/// Spawns the player "Pescy" in the Player_1 spot. In future, this will change to spawn an
+/// arbitrary player at a specified player spot
+fn spawn_player(
+    mut commands: Commands,
+    texture: Res<PlayerSheet>,
+    spawn_points: Query<(&Transform, &EntityInstance)>,
+) {
+    let translation = spawn_points
+        .iter()
+        .filter(|(_, ldtk_entity)| ldtk_entity.identifier == "Player_1")
+        .map(|(transform, _)| transform.translation.truncate())
+        .next()
+        .expect("no spawn point found for player!")
+        + Vec2::Y * 16.0;
+
     commands
         .spawn_bundle(SpriteSheetBundle {
-            transform: Transform::from_translation(Vec3::splat(0.0)),
+            transform: Transform::from_translation(translation.extend(10.0)),
             texture_atlas: texture.0.clone(),
             sprite: TextureAtlasSprite {
                 index: 0,

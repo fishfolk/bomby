@@ -1,4 +1,6 @@
 use bevy::{prelude::*, render::texture::ImageSettings};
+use bevy_ecs_ldtk::prelude::*;
+use iyes_loopless::prelude::*;
 
 mod debug;
 mod ldtk;
@@ -22,16 +24,34 @@ fn main() {
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)
-        .add_startup_system(spawn_camera)
+        .add_system(spawn_camera.run_if(ldtk::level_spawned))
         .run();
 }
 
-fn spawn_camera(mut commands: Commands) {
+// Current implementation requires that an entity with a Handle to `LdtkAsset` already exists and
+// the `LevelSelection` resource is present
+fn spawn_camera(
+    mut commands: Commands,
+    ldtk_query: Query<&Handle<LdtkAsset>>,
+    ldtk_assets: Res<Assets<LdtkAsset>>,
+    level: Res<LevelSelection>,
+) {
+    // Get coordinates to center the camera on the level
+    let ldtk_asset_handle = ldtk_query.single();
+    let ldtk_level = ldtk_assets
+        .get(ldtk_asset_handle)
+        .unwrap()
+        .get_level(&level)
+        .unwrap();
+    let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
+
+    println!("{:?}", level);
     commands.spawn_bundle(Camera2dBundle {
         projection: OrthographicProjection {
             scale: 0.5,
             ..default()
         },
+        transform: Transform::from_translation((level_dimensions / 2.0).extend(999.9)),
         ..default()
     });
 }
