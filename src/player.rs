@@ -85,11 +85,9 @@ fn animate_player(
         };
 
         // Determine if the sprite should be flipped
-        if velocity.0.x != 0.0 {
-            if velocity.0.x.signum() != animator.prev_x_velocity_sign.signum() {
-                sprite.flip_x = !sprite.flip_x;
-                animator.prev_x_velocity_sign = velocity.0.x;
-            }
+        if velocity.0.x != 0.0 && velocity.0.x.signum() != animator.prev_x_velocity_sign.signum() {
+            sprite.flip_x = !sprite.flip_x;
+            animator.prev_x_velocity_sign = velocity.0.x;
         }
     }
 }
