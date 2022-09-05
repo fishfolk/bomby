@@ -2,8 +2,6 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use iyes_loopless::prelude::*;
 
-use bevy_inspector_egui::Inspectable;
-
 use crate::ldtk;
 
 pub struct PlayerPlugin;
@@ -14,21 +12,18 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system(spawn_player.run_if(ldtk::level_spawned))
-            .add_system(handle_input)
+            .add_system(handle_input.chain(update_position))
             .add_system(animate_player);
     }
-}
-
-#[derive(Component, Inspectable, Debug)]
-pub enum PlayerAnimationState {
-    Idle,
-    Run,
 }
 
 #[derive(Component, Debug)]
 pub struct Player;
 
-/// Spawns the player "Pescy" in the Player_1 spot. In future, this will change to spawn an
+#[derive(Component, Debug)]
+pub struct Velocity(Vec2);
+
+/// Spawns the player "Fishy" in the Player_1 spot. In future, this will change to spawn an
 /// arbitrary player at a specified player spot
 fn spawn_player(
     mut commands: Commands,
@@ -54,33 +49,34 @@ fn spawn_player(
             ..default()
         })
         .insert(Player)
-        .insert(PlayerAnimationState::Idle)
+        .insert(Velocity(Vec2::ZERO))
         .insert(Name::from("Player"));
 }
 
 fn animate_player(
-    mut players: Query<(&mut TextureAtlasSprite, &PlayerAnimationState), With<Player>>,
+    mut players: Query<(&mut TextureAtlasSprite, &Velocity), With<Player>>,
     time: Res<Time>,
 ) {
-    use PlayerAnimationState::*;
     const MILLIS_BETWEEN_FRAMES: u128 = 100;
 
-    for (mut sprite, animation_state) in players.iter_mut() {
-        sprite.index = match animation_state {
-            Idle => ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize,
-            Run => {
-                ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
-            }
+    for (mut sprite, velocity) in players.iter_mut() {
+        sprite.index = if velocity.0.length_squared() == 0.0 {
+            ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize
+        } else {
+            ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
         }
     }
 }
 
+/// Get keyboard input and update the `Velocity` component of `Player`.
+/// For now, this is hardcoded to use WASD and will update every player. In the future, we will use
+/// a more sophisticated system.
 fn handle_input(
-    mut players: Query<(&mut Transform, &mut PlayerAnimationState), With<Player>>,
+    mut players: Query<&mut Velocity, With<Player>>,
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    for (mut transform, mut animation_state) in players.iter_mut() {
+    for mut velocity in players.iter_mut() {
         let mut delta_x = 0.0;
         if keyboard.pressed(KeyCode::D) {
             delta_x += 1.0;
@@ -97,14 +93,17 @@ fn handle_input(
             delta_y -= 1.0;
         }
 
-        transform.translation += Vec2::new(delta_x, delta_y).normalize_or_zero().extend(0.0)
-            * SPEED
-            * time.delta_seconds();
+        velocity.0 = Vec2::new(delta_x, delta_y).normalize_or_zero() * SPEED * time.delta_seconds();
+    }
+}
 
-        *animation_state = match delta_x != 0.0 || delta_y != 0.0 {
-            true => PlayerAnimationState::Run,
-            false => PlayerAnimationState::Idle,
-        }
+/// Update `Transform` components based on `Velocity`.
+// This is a pretty generic system, and if in future we have different entities that need a
+// velocity (such as enemies) then we should move some of this stuff to a `movement` module or
+// similar.
+fn update_position(mut q: Query<(&mut Transform, &Velocity)>) {
+    for (mut transform, velocity) in q.iter_mut() {
+        transform.translation += velocity.0.extend(0.0);
     }
 }
 
