@@ -20,8 +20,15 @@ impl Plugin for PlayerPlugin {
 #[derive(Component, Debug)]
 pub struct Player;
 
-#[derive(Component, Debug)]
+#[derive(Component, Default, Debug)]
 pub struct Velocity(Vec2);
+
+#[derive(Component, Debug)]
+pub struct PlayerAnimator {
+    /// Used to determine if the player's sprite should flip on the Y axis. This is only updated
+    /// when the sprite flips.
+    pub prev_x_velocity_sign: f32,
+}
 
 /// Spawns the player "Fishy" in the Player_1 spot. In future, this will change to spawn an
 /// arbitrary player at a specified player spot
@@ -49,21 +56,32 @@ fn spawn_player(
             ..default()
         })
         .insert(Player)
-        .insert(Velocity(Vec2::ZERO))
+        .insert(Velocity::default())
+        .insert(PlayerAnimator {
+            prev_x_velocity_sign: 0.0,
+        })
         .insert(Name::from("Player"));
 }
 
 fn animate_player(
-    mut players: Query<(&mut TextureAtlasSprite, &Velocity), With<Player>>,
+    mut players: Query<(&mut TextureAtlasSprite, &mut PlayerAnimator, &Velocity), With<Player>>,
     time: Res<Time>,
 ) {
     const MILLIS_BETWEEN_FRAMES: u128 = 100;
 
-    for (mut sprite, velocity) in players.iter_mut() {
+    for (mut sprite, mut animator, velocity) in players.iter_mut() {
         sprite.index = if velocity.0.length_squared() == 0.0 {
             ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize
         } else {
             ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
+        };
+
+        // Determine if the sprite should be flipped
+        if velocity.0.x != 0.0 {
+            if velocity.0.x.signum() != animator.prev_x_velocity_sign.signum() {
+                sprite.flip_x = !sprite.flip_x;
+                animator.prev_x_velocity_sign = velocity.0.x;
+            }
         }
     }
 }
