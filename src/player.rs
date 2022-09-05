@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use iyes_loopless::prelude::*;
 
-use crate::ldtk;
+use bevy::sprite::Anchor;
+
+use crate::ldtk::{self, ToGrid};
 
 pub struct PlayerPlugin;
 
@@ -12,14 +14,16 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system(spawn_player.run_if(ldtk::level_spawned))
-            .add_system(handle_input.chain(update_position))
+            .add_system(handle_input.chain(player_collisions).chain(update_position))
             .add_system(animate_player);
     }
 }
 
+/// Marker component for a Player
 #[derive(Component, Debug)]
 pub struct Player;
 
+/// Linear velocity. Right now only for Player.
 #[derive(Component, Default, Debug)]
 pub struct Velocity(Vec2);
 
@@ -42,8 +46,7 @@ fn spawn_player(
         .filter(|(_, ldtk_entity)| ldtk_entity.identifier == "Player_1")
         .map(|(transform, _)| transform.translation.truncate())
         .next()
-        .expect("no spawn point found for player!")
-        + Vec2::Y * 16.0;
+        .expect("no spawn point found for player!");
 
     commands
         .spawn_bundle(SpriteSheetBundle {
@@ -51,6 +54,7 @@ fn spawn_player(
             texture_atlas: texture.0.clone(),
             sprite: TextureAtlasSprite {
                 index: 0,
+                anchor: Anchor::BottomCenter,
                 ..default()
             },
             ..default()
@@ -59,6 +63,10 @@ fn spawn_player(
         .insert(Velocity::default())
         .insert(PlayerAnimator {
             prev_x_velocity_sign: 0.0,
+        })
+        .insert(CollisionBounds {
+            x: (-8.0, 8.0),
+            y: (0.0, 8.0),
         })
         .insert(Name::from("Player"));
 }
@@ -112,6 +120,63 @@ fn handle_input(
         }
 
         velocity.0 = Vec2::new(delta_x, delta_y).normalize_or_zero() * SPEED * time.delta_seconds();
+    }
+}
+
+/// Collision bounds from entity `Transform` of form (min, max)
+#[derive(Component, Debug)]
+pub struct CollisionBounds {
+    pub x: (f32, f32),
+    pub y: (f32, f32),
+}
+
+/// Detect player collisions with walls to restrict movement
+fn player_collisions(
+    mut players: Query<(&mut Velocity, &Transform, &CollisionBounds), With<Player>>,
+    tiles: Query<(&Parent, &GridCoords)>,
+    ldtk_layer_meta_q: Query<&LayerMetadata>,
+) {
+    let unwalkable = tiles
+        .iter()
+        .filter(|(parent, _)| {
+            matches!(
+                ldtk_layer_meta_q
+                    .get(***parent)
+                    .expect("tile must be a child of a layer")
+                    .identifier
+                    .as_str(),
+                "Maze" | "Bombable"
+            )
+        })
+        .map(|(_, coords)| coords)
+        .collect::<Vec<_>>();
+
+    for (mut player_velocity, player_transform, player_bounds) in players.iter_mut() {
+        if unwalkable.iter().any(|coords| {
+            let x = player_transform.translation.truncate() + Vec2::X * player_velocity.0.x;
+            (x + Vec2::X * player_bounds.x.0 + Vec2::Y * player_bounds.y.0).to_grid() == **coords
+                || (x + Vec2::X * player_bounds.x.0 + Vec2::Y * player_bounds.y.1).to_grid()
+                    == **coords
+                || (x + Vec2::X * player_bounds.x.1 + Vec2::Y * player_bounds.y.0).to_grid()
+                    == **coords
+                || (x + Vec2::X * player_bounds.x.1 + Vec2::Y * player_bounds.y.1).to_grid()
+                    == **coords
+        }) {
+            player_velocity.0.x = 0.0;
+        }
+
+        if unwalkable.iter().any(|coords| {
+            let y = player_transform.translation.truncate() + Vec2::Y * player_velocity.0.y;
+            (y + Vec2::Y * player_bounds.y.0 + Vec2::X * player_bounds.x.0).to_grid() == **coords
+                || (y + Vec2::Y * player_bounds.y.0 + Vec2::X * player_bounds.x.1).to_grid()
+                    == **coords
+                || (y + Vec2::Y * player_bounds.y.1 + Vec2::X * player_bounds.x.0).to_grid()
+                    == **coords
+                || (y + Vec2::Y * player_bounds.y.1 + Vec2::X * player_bounds.x.1).to_grid()
+                    == **coords
+        }) {
+            player_velocity.0.y = 0.0;
+        }
     }
 }
 

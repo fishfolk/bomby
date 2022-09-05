@@ -11,6 +11,45 @@ impl Plugin for BombyLdtkPlugin {
     }
 }
 
+pub const TILE_SIZE_PX: f32 = 32.0;
+pub const TILE_SIZE_PX_INV: f32 = 1.0 / TILE_SIZE_PX;
+
+pub trait ToWorld {
+    /// Convert the LDtk grid coordinates into bevy world coordinates
+    fn to_world(&self) -> Vec2;
+}
+
+impl ToWorld for GridCoords {
+    fn to_world(&self) -> Vec2 {
+        // NOTE: It would be good to be able to query the tile size at startup or compile time and
+        // use it here, instead of hardcoding.
+        Vec2::new(self.x as f32 * TILE_SIZE_PX, self.y as f32 * TILE_SIZE_PX)
+    }
+}
+
+pub trait ToGrid {
+    /// Convert the bevy world coordinates into LDtk grid coordinates
+    fn to_grid(&self) -> GridCoords;
+}
+
+impl ToGrid for Vec3 {
+    fn to_grid(&self) -> GridCoords {
+        GridCoords::new(
+            (self.x * TILE_SIZE_PX_INV) as i32,
+            (self.y * TILE_SIZE_PX_INV) as i32,
+        )
+    }
+}
+
+impl ToGrid for Vec2 {
+    fn to_grid(&self) -> GridCoords {
+        GridCoords::new(
+            (self.x * TILE_SIZE_PX_INV) as i32,
+            (self.y * TILE_SIZE_PX_INV) as i32,
+        )
+    }
+}
+
 /// Detect if there is a `Spawned` event from bevy_ecs_ldtk, indicating that the level has spawned.
 /// This means we can rely on entities existing such as the player spawn points.
 pub fn level_spawned(mut level_events: EventReader<LevelEvent>) -> bool {
