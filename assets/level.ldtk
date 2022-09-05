@@ -108,10 +108,10 @@
 			"requiredTags": [],
 			"excludedTags": [],
 			"intGridValues": [],
-			"autoTilesetDefUid": null,
+			"autoTilesetDefUid": 4,
 			"autoRuleGroups": [],
 			"autoSourceLayerDefUid": null,
-			"tilesetDefUid": null,
+			"tilesetDefUid": 4,
 			"tilePivotX": 0,
 			"tilePivotY": 0
 		},
