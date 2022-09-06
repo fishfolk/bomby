@@ -195,7 +195,7 @@ fn load_graphics(
     assets: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let image = assets.load("player/PlayerPescy(64x64).png");
+    let image = assets.load("player/PlayerFishy(64x64).png");
     let atlas = TextureAtlas::from_grid_with_padding(
         image,
         Vec2::splat(64.0),
