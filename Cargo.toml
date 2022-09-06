@@ -7,6 +7,7 @@ edition = "2021"
 bevy = "0.8"
 bevy-inspector-egui = "0.12"
 iyes_loopless = "0.7"
+leafwing-input-manager = "0.5"
 
 [dependencies.bevy_ecs_ldtk]
 version = "0.4"

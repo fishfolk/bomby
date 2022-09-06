@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
 use iyes_loopless::prelude::*;
+use leafwing_input_manager::prelude::*;
 
 use bevy::sprite::Anchor;
 
@@ -13,7 +14,9 @@ const SPEED: f32 = 125.0;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .add_system(spawn_player.run_if(ldtk::level_spawned))
+            .insert_resource(CountPlayers(2))
+            .add_plugin(InputManagerPlugin::<PlayerAction>::default())
+            .add_system(spawn_players.run_if(ldtk::level_spawned))
             .add_system(handle_input.chain(player_collisions).chain(update_position))
             .add_system(animate_player);
     }
@@ -34,41 +37,76 @@ pub struct PlayerAnimator {
     pub prev_x_velocity_sign: f32,
 }
 
-/// Spawns the player "Fishy" in the Player_1 spot. In future, this will change to spawn an
-/// arbitrary player at a specified player spot
-fn spawn_player(
-    mut commands: Commands,
-    texture: Res<PlayerSheet>,
-    spawn_points: Query<(&Transform, &EntityInstance)>,
-) {
-    let translation = spawn_points
-        .iter()
-        .filter(|(_, ldtk_entity)| ldtk_entity.identifier == "Player_1")
-        .map(|(transform, _)| transform.translation.truncate())
-        .next()
-        .expect("no spawn point found for player!");
+pub struct CountPlayers(usize);
 
-    commands
-        .spawn_bundle(SpriteSheetBundle {
-            transform: Transform::from_translation(translation.extend(10.0)),
-            texture_atlas: texture.0.clone(),
-            sprite: TextureAtlasSprite {
-                index: 0,
-                anchor: Anchor::BottomCenter,
+/// Spawns the players in their correct spawn points up to the `CountPlayers` resource, which
+/// should never exceed 4.
+/// Player 1 - Fishy
+/// Player 2 - Pescy
+/// Player 3 - Sharky
+/// Player 4 - Orcy
+fn spawn_players(
+    mut commands: Commands,
+    texture: Res<PlayerSheets>,
+    spawn_points: Query<(&Transform, &EntityInstance)>,
+    count_players: Res<CountPlayers>,
+) {
+    for i in 0..count_players.0 {
+        let player_name = format!("Player_{}", i + 1);
+
+        let translation = spawn_points
+            .iter()
+            .filter(|(_, ldtk_entity)| ldtk_entity.identifier == player_name)
+            .map(|(transform, _)| transform.translation.truncate())
+            .next()
+            .unwrap_or_else(|| panic!("no spawn point found for player: {}", player_name))
+            + Vec2::Y * -8.0;
+
+        commands
+            .spawn_bundle(SpriteSheetBundle {
+                transform: Transform::from_translation(translation.extend(10.0)),
+                texture_atlas: texture
+                    .0
+                    .get(i)
+                    .unwrap_or_else(|| panic!("no sprite sheet for player: {}", player_name))
+                    .clone(),
+                sprite: TextureAtlasSprite {
+                    index: 0,
+                    flip_x: i % 2 != 0,
+                    anchor: Anchor::BottomCenter,
+                    ..default()
+                },
                 ..default()
-            },
-            ..default()
-        })
-        .insert(Player)
-        .insert(Velocity::default())
-        .insert(PlayerAnimator {
-            prev_x_velocity_sign: 0.0,
-        })
-        .insert(CollisionBounds {
-            x: (-8.0, 8.0),
-            y: (0.0, 8.0),
-        })
-        .insert(Name::from("Player"));
+            })
+            .insert(Player)
+            .insert(Velocity::default())
+            .insert(PlayerAnimator {
+                prev_x_velocity_sign: 0.0,
+            })
+            .insert(CollisionBounds {
+                x: (-8.0, 8.0),
+                y: (0.0, 8.0),
+            })
+            .insert_bundle(InputManagerBundle::<PlayerAction> {
+                input_map: match i {
+                    0 => InputMap::new([
+                        (KeyCode::A, PlayerAction::Left),
+                        (KeyCode::D, PlayerAction::Right),
+                        (KeyCode::W, PlayerAction::Up),
+                        (KeyCode::S, PlayerAction::Down),
+                    ]),
+                    1 => InputMap::new([
+                        (KeyCode::Left, PlayerAction::Left),
+                        (KeyCode::Right, PlayerAction::Right),
+                        (KeyCode::Up, PlayerAction::Up),
+                        (KeyCode::Down, PlayerAction::Down),
+                    ]),
+                    _ => panic!("no input map for player: {}", player_name),
+                },
+                ..default()
+            })
+            .insert(Name::new(player_name));
+    }
 }
 
 fn animate_player(
@@ -86,34 +124,39 @@ fn animate_player(
 
         // Determine if the sprite should be flipped
         if velocity.0.x != 0.0 && velocity.0.x.signum() != animator.prev_x_velocity_sign.signum() {
-            sprite.flip_x = !sprite.flip_x;
+            sprite.flip_x = velocity.0.x < 0.0;
             animator.prev_x_velocity_sign = velocity.0.x;
         }
     }
 }
 
-/// Get keyboard input and update the `Velocity` component of `Player`.
-/// For now, this is hardcoded to use WASD and will update every player. In the future, we will use
-/// a more sophisticated system.
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+enum PlayerAction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+/// Get input and update the `Velocity` component of `Player`.
 fn handle_input(
-    mut players: Query<&mut Velocity, With<Player>>,
-    keyboard: Res<Input<KeyCode>>,
+    mut players: Query<(&ActionState<PlayerAction>, &mut Velocity), With<Player>>,
     time: Res<Time>,
 ) {
-    for mut velocity in players.iter_mut() {
+    for (action_state, mut velocity) in players.iter_mut() {
         let mut delta_x = 0.0;
-        if keyboard.pressed(KeyCode::D) {
+        if action_state.pressed(PlayerAction::Right) {
             delta_x += 1.0;
         }
-        if keyboard.pressed(KeyCode::A) {
+        if action_state.pressed(PlayerAction::Left) {
             delta_x -= 1.0;
         }
 
         let mut delta_y = 0.0;
-        if keyboard.pressed(KeyCode::W) {
+        if action_state.pressed(PlayerAction::Up) {
             delta_y += 1.0;
         }
-        if keyboard.pressed(KeyCode::S) {
+        if action_state.pressed(PlayerAction::Down) {
             delta_y -= 1.0;
         }
 
@@ -188,22 +231,32 @@ fn update_position(mut q: Query<(&mut Transform, &Velocity)>) {
     }
 }
 
-struct PlayerSheet(Handle<TextureAtlas>);
+struct PlayerSheets(Vec<Handle<TextureAtlas>>);
 
 fn load_graphics(
     mut commands: Commands,
     assets: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let image = assets.load("player/PlayerFishy(64x64).png");
-    let atlas = TextureAtlas::from_grid_with_padding(
-        image,
-        Vec2::splat(64.0),
-        14,
-        7,
-        Vec2::new(32.0, 16.0),
-        Vec2::new(16.0, 0.0),
-    );
-    let atlas_handle = texture_atlases.add(atlas);
-    commands.insert_resource(PlayerSheet(atlas_handle));
+    macro_rules! load {
+        ($path:literal) => {{
+            let image = assets.load($path);
+            let atlas = TextureAtlas::from_grid_with_padding(
+                image,
+                Vec2::splat(64.0),
+                14,
+                7,
+                Vec2::new(32.0, 16.0),
+                Vec2::new(16.0, 0.0),
+            );
+            texture_atlases.add(atlas)
+        }};
+    }
+
+    commands.insert_resource(PlayerSheets(vec![
+        load!("player/PlayerFishy(64x64).png"),
+        load!("player/PlayerPescy(64x64).png"),
+        load!("player/PlayerSharky(64x64).png"),
+        load!("player/PlayerOrcy(64x64).png"),
+    ]));
 }
