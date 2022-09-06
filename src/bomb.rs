@@ -15,7 +15,8 @@ impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system(spawn_bombs)
-            .add_system(update_bombs);
+            .add_system(update_bombs)
+            .add_system(animate_bombs);
     }
 }
 
@@ -79,6 +80,17 @@ fn update_bombs(
                 commands.entity(tile.0).despawn_recursive();
             }
         }
+    }
+}
+
+/// Do not tick the bomb timer anywhere other than `update_bombs`.
+fn animate_bombs(mut bombs: Query<(&Bomb, &mut Transform)>) {
+    for (bomb, mut transform) in bombs.iter_mut() {
+        transform.scale = Vec3::ONE
+            + (Vec2::ONE
+                * 0.1
+                * ((16.0 * std::f32::consts::PI / 6.0) * bomb.timer.elapsed_secs()).sin())
+            .extend(1.0)
     }
 }
 
