@@ -23,7 +23,10 @@ impl ToWorld for GridCoords {
     fn to_world(&self) -> Vec2 {
         // NOTE: It would be good to be able to query the tile size at startup or compile time and
         // use it here, instead of hardcoding.
-        Vec2::new(self.x as f32 * TILE_SIZE_PX, self.y as f32 * TILE_SIZE_PX)
+        Vec2::new(
+            self.x as f32 * TILE_SIZE_PX + TILE_SIZE_PX / 2.0,
+            self.y as f32 * TILE_SIZE_PX + TILE_SIZE_PX / 2.0,
+        )
     }
 }
 

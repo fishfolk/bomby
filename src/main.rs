@@ -2,6 +2,7 @@ use bevy::{prelude::*, render::texture::ImageSettings};
 use bevy_ecs_ldtk::prelude::*;
 use iyes_loopless::prelude::*;
 
+mod bomb;
 mod debug;
 mod ldtk;
 mod player;
@@ -24,6 +25,7 @@ fn main() {
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)
+        .add_plugin(bomb::BombPlugin)
         .add_system(spawn_camera.run_if(ldtk::level_spawned))
         .run();
 }

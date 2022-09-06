@@ -17,7 +17,11 @@ impl Plugin for PlayerPlugin {
             .insert_resource(CountPlayers(2))
             .add_plugin(InputManagerPlugin::<PlayerAction>::default())
             .add_system(spawn_players.run_if(ldtk::level_spawned))
-            .add_system(handle_input.chain(player_collisions).chain(update_position))
+            .add_system(
+                movement_input
+                    .chain(player_collisions)
+                    .chain(update_position),
+            )
             .add_system(animate_player);
     }
 }
@@ -94,12 +98,14 @@ fn spawn_players(
                         (KeyCode::D, PlayerAction::Right),
                         (KeyCode::W, PlayerAction::Up),
                         (KeyCode::S, PlayerAction::Down),
+                        (KeyCode::Space, PlayerAction::Bomb),
                     ]),
                     1 => InputMap::new([
                         (KeyCode::Left, PlayerAction::Left),
                         (KeyCode::Right, PlayerAction::Right),
                         (KeyCode::Up, PlayerAction::Up),
                         (KeyCode::Down, PlayerAction::Down),
+                        (KeyCode::RShift, PlayerAction::Bomb),
                     ]),
                     _ => panic!("no input map for player: {}", player_name),
                 },
@@ -130,16 +136,18 @@ fn animate_player(
     }
 }
 
+// NOTE: If you are adding an Action, remember to update the `InputMap`s!
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
-enum PlayerAction {
+pub enum PlayerAction {
     Left,
     Right,
     Up,
     Down,
+    Bomb,
 }
 
 /// Get input and update the `Velocity` component of `Player`.
-fn handle_input(
+fn movement_input(
     mut players: Query<(&ActionState<PlayerAction>, &mut Velocity), With<Player>>,
     time: Res<Time>,
 ) {
