@@ -76,40 +76,54 @@ fn spawn_bombs(
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
-    mut players: Query<&mut CountBombs, With<Player>>,
+    mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
 ) {
-    for (entity, mut bomb, bomb_transform) in bombs.iter_mut() {
+    for (entity, mut bomb, bomb_coords) in bombs
+        .iter_mut()
+        .map(|(e, b, transform)| (e, b, transform.translation.to_grid()))
+    {
         bomb.timer.tick(time.delta());
 
         if bomb.timer.just_finished() {
             commands.entity(entity).despawn_recursive();
 
             // Decrement `CountBombs` component on the player that spawned the bomb
-            players
-                .get_mut(bomb.spawner)
-                .expect("exploded bomb had not parent player")
-                .0 -= 1;
+            if let Ok((_, mut bomb_count, _)) = players.get_mut(bomb.spawner) {
+                bomb_count.0 -= 1;
+            }
 
-            // Destroy bombable tiles within 1 orthogonal tile
-            for tile in tiles
+            // Get tiles within 1 orthogonal tile
+            let affected_tiles = tiles
                 .iter()
-                .filter(|(_, parent, _)| {
-                    ldtk_layer_meta_q
-                        .get(***parent)
-                        .expect("tile must be a child of a layer")
-                        .identifier
-                        .as_str()
-                        == "Bombable"
-                })
                 .filter(|(_, _, coords)| {
-                    let displacement = **coords - bomb_transform.translation.to_grid();
+                    let displacement = **coords - bomb_coords;
                     displacement.x.pow(2) + displacement.y.pow(2) <= 1
                 })
-            {
+                .collect::<Vec<_>>();
+
+            // Destroy bombable tiles within 1 orthogonal tile
+            for tile in affected_tiles.iter().filter(|(_, parent, _)| {
+                ldtk_layer_meta_q
+                    .get(***parent)
+                    .expect("tile must be a child of a layer")
+                    .identifier
+                    .as_str()
+                    == "Bombable"
+            }) {
                 commands.entity(tile.0).despawn_recursive();
+            }
+
+            // Blow up players. Destroying for now, in future probably add a marker component which
+            // then causes other behaviour
+            for (entity, _, _) in players.iter().filter(|(_, _, player_transform)| {
+                affected_tiles
+                    .iter()
+                    .any(|(_, _, coords)| player_transform.translation.to_grid() == **coords)
+            }) {
+                commands.entity(entity).despawn_recursive();
             }
         }
     }
