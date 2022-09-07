@@ -18,7 +18,7 @@ const SPEED: f32 = 125.0;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .insert_resource(CountPlayers(2))
+            .insert_resource(CountPlayers(4))
             .add_plugin(InputManagerPlugin::<PlayerAction>::default())
             .add_system(spawn_players.run_if(ldtk::level_spawned))
             .add_system(
@@ -96,22 +96,42 @@ fn spawn_players(
                 y: (0.0, 8.0),
             })
             .insert(CountBombs::default())
+            // For testing purposes, all of the keys/controllers are hardcoded and assigned to the
+            // same players each time.
             .insert_bundle(InputManagerBundle::<PlayerAction> {
                 input_map: match i {
-                    0 => InputMap::new([
-                        (KeyCode::A, PlayerAction::Left),
-                        (KeyCode::D, PlayerAction::Right),
-                        (KeyCode::W, PlayerAction::Up),
-                        (KeyCode::S, PlayerAction::Down),
-                        (KeyCode::Space, PlayerAction::Bomb),
-                    ]),
-                    1 => InputMap::new([
-                        (KeyCode::Left, PlayerAction::Left),
-                        (KeyCode::Right, PlayerAction::Right),
-                        (KeyCode::Up, PlayerAction::Up),
-                        (KeyCode::Down, PlayerAction::Down),
-                        (KeyCode::RShift, PlayerAction::Bomb),
-                    ]),
+                    0 => InputMap::new([(
+                        VirtualDPad {
+                            up: KeyCode::W.into(),
+                            down: KeyCode::S.into(),
+                            left: KeyCode::A.into(),
+                            right: KeyCode::D.into(),
+                        },
+                        PlayerAction::Move,
+                    )])
+                    .insert(KeyCode::Space, PlayerAction::Bomb)
+                    .build(),
+                    1 => InputMap::new([(
+                        VirtualDPad {
+                            up: KeyCode::Up.into(),
+                            down: KeyCode::Down.into(),
+                            left: KeyCode::Left.into(),
+                            right: KeyCode::Right.into(),
+                        },
+                        PlayerAction::Move,
+                    )])
+                    .insert(KeyCode::RShift, PlayerAction::Bomb)
+                    .build(),
+                    2 => InputMap::new([(DualAxis::left_stick(), PlayerAction::Move)])
+                        .insert(VirtualDPad::dpad(), PlayerAction::Move)
+                        .insert(GamepadButtonType::East, PlayerAction::Bomb)
+                        .set_gamepad(Gamepad { id: 0 })
+                        .build(),
+                    3 => InputMap::new([(DualAxis::left_stick(), PlayerAction::Move)])
+                        .insert(VirtualDPad::dpad(), PlayerAction::Move)
+                        .insert(GamepadButtonType::East, PlayerAction::Bomb)
+                        .set_gamepad(Gamepad { id: 1 })
+                        .build(),
                     _ => panic!("no input map for player: {}", player_name),
                 },
                 ..default()
@@ -144,10 +164,7 @@ fn animate_player(
 // NOTE: If you are adding an Action, remember to update the `InputMap`s!
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum PlayerAction {
-    Left,
-    Right,
-    Up,
-    Down,
+    Move,
     Bomb,
 }
 
@@ -157,23 +174,11 @@ fn movement_input(
     time: Res<Time>,
 ) {
     for (action_state, mut velocity) in players.iter_mut() {
-        let mut delta_x = 0.0;
-        if action_state.pressed(PlayerAction::Right) {
-            delta_x += 1.0;
+        let mut axis_data = Vec2::ZERO;
+        if action_state.pressed(PlayerAction::Move) {
+            axis_data = action_state.axis_pair(PlayerAction::Move).unwrap().xy();
         }
-        if action_state.pressed(PlayerAction::Left) {
-            delta_x -= 1.0;
-        }
-
-        let mut delta_y = 0.0;
-        if action_state.pressed(PlayerAction::Up) {
-            delta_y += 1.0;
-        }
-        if action_state.pressed(PlayerAction::Down) {
-            delta_y -= 1.0;
-        }
-
-        velocity.0 = Vec2::new(delta_x, delta_y).normalize_or_zero() * SPEED * time.delta_seconds();
+        velocity.0 = axis_data.normalize_or_zero() * SPEED * time.delta_seconds();
     }
 }
 
