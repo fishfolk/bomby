@@ -9,6 +9,7 @@ use crate::{
 
 pub struct BombPlugin;
 
+const MAX_BOMBS_PER_PLAYER: u8 = 2;
 const BOMB_TIMER_SECS: f32 = 1.5;
 
 impl Plugin for BombPlugin {
@@ -22,18 +23,39 @@ impl Plugin for BombPlugin {
 
 #[derive(Component, Debug)]
 pub struct Bomb {
+    spawner: Entity,
     timer: Timer,
 }
 
+/// This is used to keep track of the current number of active bombs a player (or other bomb
+/// wielding entity) has placed.
+#[derive(Component, Default, Debug)]
+pub struct CountBombs(u8);
+
 fn spawn_bombs(
     mut commands: Commands,
-    players: Query<(&ActionState<PlayerAction>, &Transform), With<Player>>,
+    mut players: Query<
+        (
+            Entity,
+            &ActionState<PlayerAction>,
+            &Transform,
+            &mut CountBombs,
+        ),
+        With<Player>,
+    >,
     texture_atlas: Res<BombSprite>,
 ) {
-    for translation in players
-        .iter()
-        .filter(|(action_state, _)| action_state.just_pressed(PlayerAction::Bomb))
-        .map(|(_, transform)| transform.translation.to_grid().to_world())
+    for (entity, translation, mut count_bombs) in players
+        .iter_mut()
+        .filter(|(_, _, _, count_bombs)| count_bombs.0 < MAX_BOMBS_PER_PLAYER)
+        .filter(|(_, action_state, _, _)| action_state.just_pressed(PlayerAction::Bomb))
+        .map(|(entity, _, transform, count_bombs)| {
+            (
+                entity,
+                transform.translation.to_grid().to_world(),
+                count_bombs,
+            )
+        })
     {
         commands
             .spawn_bundle(SpriteSheetBundle {
@@ -42,8 +64,11 @@ fn spawn_bombs(
                 ..default()
             })
             .insert(Bomb {
+                spawner: entity,
                 timer: Timer::from_seconds(BOMB_TIMER_SECS, false),
             });
+
+        count_bombs.0 += 1;
     }
 }
 
@@ -51,6 +76,7 @@ fn spawn_bombs(
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
+    mut players: Query<&mut CountBombs, With<Player>>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -60,6 +86,12 @@ fn update_bombs(
 
         if bomb.timer.just_finished() {
             commands.entity(entity).despawn_recursive();
+
+            // Decrement `CountBombs` component on the player that spawned the bomb
+            players
+                .get_mut(bomb.spawner)
+                .expect("exploded bomb had not parent player")
+                .0 -= 1;
 
             // Destroy bombable tiles within 1 orthogonal tile
             for tile in tiles

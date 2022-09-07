@@ -5,7 +5,10 @@ use leafwing_input_manager::prelude::*;
 
 use bevy::sprite::Anchor;
 
-use crate::ldtk::{self, ToGrid};
+use crate::{
+    bomb::CountBombs,
+    ldtk::{self, ToGrid},
+};
 
 pub struct PlayerPlugin;
 
@@ -91,6 +94,7 @@ fn spawn_players(
                 x: (-8.0, 8.0),
                 y: (0.0, 8.0),
             })
+            .insert(CountBombs::default())
             .insert_bundle(InputManagerBundle::<PlayerAction> {
                 input_map: match i {
                     0 => InputMap::new([
