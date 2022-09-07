@@ -980,6 +980,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_ecs_ldtk",
+ "itertools",
  "iyes_loopless",
  "leafwing-input-manager",
 ]

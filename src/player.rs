@@ -4,9 +4,10 @@ use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use bevy::sprite::Anchor;
+use itertools::Itertools;
 
 use crate::{
-    bomb::CountBombs,
+    bomb::{Bomb, CountBombs},
     ldtk::{self, ToGrid},
 };
 
@@ -183,23 +184,31 @@ pub struct CollisionBounds {
     pub y: (f32, f32),
 }
 
-/// Detect player collisions with walls to restrict movement
+/// Detect player collisions with walls and bombs to restrict movement
 fn player_collisions(
     mut players: Query<(&mut Velocity, &Transform, &CollisionBounds), With<Player>>,
     tiles: Query<(&Parent, &GridCoords)>,
+    bombs: Query<&Transform, With<Bomb>>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
 ) {
+    // Get the coords of tiles with a bomb on them
+    let bomb_tiles = bombs
+        .iter()
+        .map(|t| t.translation.to_grid())
+        .collect::<Vec<_>>();
+
     let unwalkable = tiles
         .iter()
-        .filter(|(parent, _)| {
-            matches!(
-                ldtk_layer_meta_q
-                    .get(***parent)
-                    .expect("tile must be a child of a layer")
-                    .identifier
-                    .as_str(),
-                "Maze" | "Bombable"
-            )
+        .filter(|(parent, coords)| {
+            bomb_tiles.iter().any(|b| b == *coords)
+                || matches!(
+                    ldtk_layer_meta_q
+                        .get(***parent)
+                        .expect("tile must be a child of a layer")
+                        .identifier
+                        .as_str(),
+                    "Maze" | "Bombable"
+                )
         })
         .map(|(_, coords)| coords)
         .collect::<Vec<_>>();
@@ -207,26 +216,32 @@ fn player_collisions(
     for (mut player_velocity, player_transform, player_bounds) in players.iter_mut() {
         if unwalkable.iter().any(|coords| {
             let x = player_transform.translation.truncate() + Vec2::X * player_velocity.0.x;
-            (x + Vec2::X * player_bounds.x.0 + Vec2::Y * player_bounds.y.0).to_grid() == **coords
-                || (x + Vec2::X * player_bounds.x.0 + Vec2::Y * player_bounds.y.1).to_grid()
-                    == **coords
-                || (x + Vec2::X * player_bounds.x.1 + Vec2::Y * player_bounds.y.0).to_grid()
-                    == **coords
-                || (x + Vec2::X * player_bounds.x.1 + Vec2::Y * player_bounds.y.1).to_grid()
-                    == **coords
+            match player_velocity.0.x.signum() as i8 {
+                -1 => vec![player_bounds.x.0],
+                1 => vec![player_bounds.x.1],
+                _ => Vec::new(),
+            }
+            .iter()
+            .cartesian_product(vec![player_bounds.y.0, player_bounds.y.1].iter())
+            .map(|(bound_x, bound_y)| (x + Vec2::X * *bound_x + Vec2::Y * *bound_y).to_grid())
+            .filter(|player_coord| *player_coord != player_transform.translation.to_grid())
+            .any(|player_coord| player_coord == **coords)
         }) {
             player_velocity.0.x = 0.0;
         }
 
         if unwalkable.iter().any(|coords| {
             let y = player_transform.translation.truncate() + Vec2::Y * player_velocity.0.y;
-            (y + Vec2::Y * player_bounds.y.0 + Vec2::X * player_bounds.x.0).to_grid() == **coords
-                || (y + Vec2::Y * player_bounds.y.0 + Vec2::X * player_bounds.x.1).to_grid()
-                    == **coords
-                || (y + Vec2::Y * player_bounds.y.1 + Vec2::X * player_bounds.x.0).to_grid()
-                    == **coords
-                || (y + Vec2::Y * player_bounds.y.1 + Vec2::X * player_bounds.x.1).to_grid()
-                    == **coords
+            match player_velocity.0.y.signum() as i8 {
+                -1 => vec![player_bounds.y.0],
+                1 => vec![player_bounds.y.1],
+                _ => Vec::new(),
+            }
+            .iter()
+            .cartesian_product(vec![player_bounds.x.0, player_bounds.x.1].iter())
+            .map(|(bound_y, bound_x)| (y + Vec2::X * *bound_x + Vec2::Y * *bound_y).to_grid())
+            .filter(|player_coord| *player_coord != player_transform.translation.to_grid())
+            .any(|player_coord| player_coord == **coords)
         }) {
             player_velocity.0.y = 0.0;
         }
