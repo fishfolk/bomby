@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
+use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
     ldtk::{ToGrid, ToWorld},
     player::{Player, PlayerAction},
+    GameState,
 };
 
 pub struct BombPlugin;
@@ -15,9 +17,14 @@ const BOMB_TIMER_SECS: f32 = 1.5;
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .add_system(spawn_bombs)
-            .add_system(update_bombs)
-            .add_system(animate_bombs);
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::InGame)
+                    .with_system(spawn_bombs)
+                    .with_system(update_bombs)
+                    .with_system(animate_bombs)
+                    .into(),
+            );
     }
 }
 

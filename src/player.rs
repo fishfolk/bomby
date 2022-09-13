@@ -8,7 +8,8 @@ use itertools::Itertools;
 
 use crate::{
     bomb::{Bomb, CountBombs},
-    ldtk::{self, ToGrid},
+    ldtk::ToGrid,
+    GameState,
 };
 
 pub struct PlayerPlugin;
@@ -20,13 +21,14 @@ impl Plugin for PlayerPlugin {
         app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .insert_resource(CountPlayers(4))
             .add_plugin(InputManagerPlugin::<PlayerAction>::default())
-            .add_system(spawn_players.run_if(ldtk::level_spawned))
+            .add_enter_system(GameState::InGame, spawn_players)
             .add_system(
                 movement_input
                     .chain(player_collisions)
-                    .chain(update_position),
+                    .chain(update_position)
+                    .run_in_state(GameState::InGame),
             )
-            .add_system(animate_player);
+            .add_system(animate_player.run_in_state(GameState::InGame));
     }
 }
 
