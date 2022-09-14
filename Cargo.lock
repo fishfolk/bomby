@@ -625,6 +625,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ninepatch"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d6a355afe48cda766adc96e3b13df646b5798c38bb2ec41a16a8ec2d1517dd2"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_pbr"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -980,6 +989,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_ecs_ldtk",
+ "bevy_ninepatch",
  "itertools",
  "iyes_loopless",
  "leafwing-input-manager",

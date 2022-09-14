@@ -21,7 +21,7 @@ pub enum GameState {
 
 fn main() {
     App::new()
-        .add_loopless_state(GameState::LoadingLevel)
+        .add_loopless_state(GameState::MainMenu)
         .insert_resource(ImageSettings::default_nearest())
         .insert_resource(WindowDescriptor {
             width: WINDOW_WIDTH,
@@ -36,5 +36,6 @@ fn main() {
         .add_plugin(ldtk::BombyLdtkPlugin)
         .add_plugin(bomb::BombPlugin)
         .add_plugin(camera::CameraPlugin)
+        .add_plugin(ui::UiPlugin)
         .run();
 }
