@@ -94,7 +94,6 @@ fn spawn_green_button_with_text(
                 font: font.0.clone(),
                 font_size: 40.0,
                 color: Color::BLACK,
-                ..default()
             },
         ))
         .id();
