@@ -229,7 +229,7 @@ fn player_collisions(
                 _ => Vec::new(),
             }
             .iter()
-            .cartesian_product(vec![player_bounds.y.0, player_bounds.y.1].iter())
+            .cartesian_product([player_bounds.y.0, player_bounds.y.1].iter())
             .map(|(bound_x, bound_y)| (x + Vec2::X * *bound_x + Vec2::Y * *bound_y).to_grid())
             .filter(|player_coord| *player_coord != player_transform.translation.to_grid())
             .any(|player_coord| player_coord == **coords)
@@ -245,7 +245,7 @@ fn player_collisions(
                 _ => Vec::new(),
             }
             .iter()
-            .cartesian_product(vec![player_bounds.x.0, player_bounds.x.1].iter())
+            .cartesian_product([player_bounds.x.0, player_bounds.x.1].iter())
             .map(|(bound_y, bound_x)| (y + Vec2::X * *bound_x + Vec2::Y * *bound_y).to_grid())
             .filter(|player_coord| *player_coord != player_transform.translation.to_grid())
             .any(|player_coord| player_coord == **coords)
