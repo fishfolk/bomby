@@ -4,6 +4,8 @@
 
 Fish with bombs.
 
+https://user-images.githubusercontent.com/583842/196045851-16923828-a075-49fc-a760-1482fe6d0a84.MOV
+
 This game is part of the [Fish Folk](https://spicylobster.itch.io/jumpy/devlog/412030/welcome-to-the-world-of-fish-folk) bundle! Take a look at some of the other games being worked on:
 
 - [Jumpy](https://github.com/fishfolks/jumpy)
