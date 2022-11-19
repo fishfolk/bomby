@@ -75,7 +75,7 @@ fn finish_loading(mut commands: Commands) {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
-        .spawn_bundle(LdtkWorldBundle {
+        .spawn(LdtkWorldBundle {
             ldtk_handle: asset_server.load("level.ldtk"),
             ..default()
         })

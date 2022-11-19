@@ -71,14 +71,14 @@ fn spawn_bombs(
         })
     {
         commands
-            .spawn_bundle(SpriteSheetBundle {
+            .spawn(SpriteSheetBundle {
                 texture_atlas: texture_atlas.0.clone(),
                 transform: Transform::from_translation(translation.extend(20.0) + Vec3::Y * 2.0),
                 ..default()
             })
             .insert(Bomb {
                 spawner: entity,
-                timer: Timer::from_seconds(BOMB_TIMER_SECS, false),
+                timer: Timer::from_seconds(BOMB_TIMER_SECS, TimerMode::Once),
             });
 
         count_bombs.0 += 1;
@@ -153,6 +153,7 @@ fn animate_bombs(mut bombs: Query<(&Bomb, &mut Transform)>) {
     }
 }
 
+#[derive(Resource)]
 pub struct BombSprite(Handle<TextureAtlas>);
 
 fn load_graphics(
@@ -161,13 +162,13 @@ fn load_graphics(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let image = assets.load("Bomb.png");
-    let atlas = TextureAtlas::from_grid_with_padding(
+    let atlas = TextureAtlas::from_grid(
         image,
         Vec2::new(32.0, 33.0),
         1,
         1,
-        Vec2::ZERO,
-        Vec2::new(0.0, 11.0),
+        Some(Vec2::ZERO),
+        Some(Vec2::new(0.0, 11.0)),
     );
     let atlas_handle = texture_atlases.add(atlas);
     commands.insert_resource(BombSprite(atlas_handle));

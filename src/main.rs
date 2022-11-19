@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::texture::ImageSettings};
+use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
 mod bomb;
@@ -21,16 +21,21 @@ pub enum GameState {
 
 fn main() {
     App::new()
-        .add_loopless_state(GameState::MainMenu)
-        .insert_resource(ImageSettings::default_nearest())
-        .insert_resource(WindowDescriptor {
-            width: WINDOW_WIDTH,
-            height: WINDOW_HEIGHT,
-            title: "Bomby!".to_string(),
-            resizable: false,
-            ..default()
-        })
-        .add_plugins(DefaultPlugins)
+        .add_loopless_state(GameState::LoadingLevel)
+        .add_plugins(
+            DefaultPlugins
+                .set(ImagePlugin::default_nearest())
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        width: WINDOW_WIDTH,
+                        height: WINDOW_HEIGHT,
+                        title: "Bomby!".to_string(),
+                        resizable: false,
+                        ..default()
+                    },
+                    ..default()
+                }),
+        )
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)

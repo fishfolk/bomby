@@ -24,8 +24,8 @@ impl Plugin for PlayerPlugin {
             .add_enter_system(GameState::InGame, spawn_players)
             .add_system(
                 movement_input
-                    .chain(player_collisions)
-                    .chain(update_position)
+                    .pipe(player_collisions)
+                    .pipe(update_position)
                     .run_in_state(GameState::InGame),
             )
             .add_system(animate_player.run_in_state(GameState::InGame));
@@ -47,6 +47,8 @@ pub struct PlayerAnimator {
     pub prev_x_velocity_sign: f32,
 }
 
+/// The number of players that will be spawned during setup.
+#[derive(Resource)]
 pub struct CountPlayers(usize);
 
 /// Spawns the players in their correct spawn points up to the `CountPlayers` resource, which
@@ -73,7 +75,7 @@ fn spawn_players(
             + Vec2::Y * -8.0;
 
         commands
-            .spawn_bundle(SpriteSheetBundle {
+            .spawn(SpriteSheetBundle {
                 transform: Transform::from_translation(translation.extend(10.0)),
                 texture_atlas: texture
                     .0
@@ -100,7 +102,7 @@ fn spawn_players(
             .insert(CountBombs::default())
             // For testing purposes, all of the keys/controllers are hardcoded and assigned to the
             // same players each time.
-            .insert_bundle(InputManagerBundle::<PlayerAction> {
+            .insert(InputManagerBundle::<PlayerAction> {
                 input_map: match i {
                     0 => InputMap::new([(
                         VirtualDPad {
@@ -150,9 +152,9 @@ fn animate_player(
 
     for (mut sprite, mut animator, velocity) in players.iter_mut() {
         sprite.index = if velocity.0.length_squared() == 0.0 {
-            ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize
+            ((time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize
         } else {
-            ((time.time_since_startup().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
+            ((time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
         };
 
         // Determine if the sprite should be flipped
@@ -265,6 +267,7 @@ fn update_position(mut q: Query<(&mut Transform, &Velocity)>) {
     }
 }
 
+#[derive(Resource)]
 struct PlayerSheets(Vec<Handle<TextureAtlas>>);
 
 fn load_graphics(
@@ -275,13 +278,13 @@ fn load_graphics(
     macro_rules! load {
         ($path:literal) => {{
             let image = assets.load($path);
-            let atlas = TextureAtlas::from_grid_with_padding(
+            let atlas = TextureAtlas::from_grid(
                 image,
                 Vec2::splat(64.0),
                 14,
                 7,
-                Vec2::new(32.0, 16.0),
-                Vec2::new(16.0, 0.0),
+                Some(Vec2::new(32.0, 16.0)),
+                Some(Vec2::new(16.0, 0.0)),
             );
             texture_atlases.add(atlas)
         }};

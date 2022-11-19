@@ -33,7 +33,7 @@ fn center_camera(
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle {
+    commands.spawn(Camera2dBundle {
         projection: OrthographicProjection {
             scale: 0.5,
             ..default()
