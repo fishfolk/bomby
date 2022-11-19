@@ -15,12 +15,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        components: clippy, rustfmt
+        override: true
+        
     - name: Install alsa and udev
       run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+      
     - name: Check
       run: cargo check
+      
     - name: Clippy
       run: cargo clippy -- -D warnings
+      
     - name: Format
       run: cargo fmt --check
