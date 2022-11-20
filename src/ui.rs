@@ -69,7 +69,7 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 padding: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Percent(25.0), Val::Px(0.0)),
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::FlexStart,
                 align_items: AlignItems::Center,
                 ..default()

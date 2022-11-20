@@ -21,7 +21,7 @@ pub enum GameState {
 
 fn main() {
     App::new()
-        .add_loopless_state(GameState::LoadingLevel)
+        .add_loopless_state(GameState::MainMenu)
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
