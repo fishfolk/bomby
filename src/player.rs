@@ -226,6 +226,13 @@ fn player_collisions(
     for (mut player_velocity, player_transform, player_bounds) in players.iter_mut() {
         if unwalkable.iter().any(|coords| {
             let x = player_transform.translation.truncate() + Vec2::X * player_velocity.0.x;
+            // FIXME: This match, and the similar one below, may not be sound as `signum` for f32
+            // may use `+0.0` or `-0.0` for +ve/-ve, as well as `INFINITY`/`NEG_INFINITY` or
+            // `1`/`-1`. (see https://doc.rust-lang.org/std/primitive.f32.html#method.signum).
+            // Notably, +0.0, -0.0, and `NaN` are all 0i8 when cast, and hence we can get the wrong
+            // behaviour.
+            //
+            // In practise it appears that `f32::signum` consistently returns 1.0 or -1.0.
             match player_velocity.0.x.signum() as i8 {
                 -1 => vec![player_bounds.x.0],
                 1 => vec![player_bounds.x.1],
