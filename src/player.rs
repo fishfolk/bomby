@@ -40,7 +40,7 @@ pub struct Player;
 #[derive(Component, Default, Debug)]
 pub struct Velocity(Vec2);
 
-#[derive(Component, Debug)]
+#[derive(Component, Default, Debug)]
 pub struct PlayerAnimator {
     /// Used to determine if the player's sprite should flip on the Y axis. This is only updated
     /// when the sprite flips.
@@ -59,7 +59,7 @@ pub struct CountPlayers(usize);
 /// Player 4 - Orcy
 fn spawn_players(
     mut commands: Commands,
-    texture: Res<PlayerSheets>,
+    textures: Res<PlayerSheets>,
     spawn_points: Query<(&Transform, &EntityInstance)>,
     count_players: Res<CountPlayers>,
 ) {
@@ -77,7 +77,7 @@ fn spawn_players(
         commands
             .spawn(SpriteSheetBundle {
                 transform: Transform::from_translation(translation.extend(10.0)),
-                texture_atlas: texture
+                texture_atlas: textures
                     .0
                     .get(i)
                     .unwrap_or_else(|| panic!("no sprite sheet for player: {}", player_name))
@@ -92,9 +92,7 @@ fn spawn_players(
             })
             .insert(Player)
             .insert(Velocity::default())
-            .insert(PlayerAnimator {
-                prev_x_velocity_sign: 0.0,
-            })
+            .insert(PlayerAnimator::default())
             .insert(CollisionBounds {
                 x: (-8.0, 8.0),
                 y: (0.0, 8.0),
@@ -150,11 +148,14 @@ fn animate_player(
 ) {
     const MILLIS_BETWEEN_FRAMES: u128 = 100;
 
+    const IDLE_FRAMES: usize = 14;
+    const RUN_FRAMES: usize = 6;
+
     for (mut sprite, mut animator, velocity) in players.iter_mut() {
         sprite.index = if velocity.0.length_squared() == 0.0 {
-            ((time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) % 14) as usize
+            (time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) as usize % IDLE_FRAMES
         } else {
-            ((time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) % 6) as usize + 14
+            (time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) as usize % RUN_FRAMES + IDLE_FRAMES
         };
 
         // Determine if the sprite should be flipped
@@ -178,10 +179,10 @@ fn movement_input(
     time: Res<Time>,
 ) {
     for (action_state, mut velocity) in players.iter_mut() {
-        let mut axis_data = Vec2::ZERO;
-        if action_state.pressed(PlayerAction::Move) {
-            axis_data = action_state.axis_pair(PlayerAction::Move).unwrap().xy();
-        }
+        let axis_data = match action_state.axis_pair(PlayerAction::Move) {
+            Some(axis_data) => axis_data.xy(),
+            None => Vec2::ZERO,
+        };
         velocity.0 = axis_data.normalize_or_zero() * SPEED * time.delta_seconds();
     }
 }

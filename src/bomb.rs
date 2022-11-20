@@ -55,11 +55,11 @@ fn spawn_bombs(
 ) {
     for (entity, translation, mut count_bombs) in players
         .iter_mut()
-        .filter(|(_, _, _, count_bombs)| count_bombs.0 < MAX_BOMBS_PER_PLAYER)
         .filter(|(_, action_state, _, _)| action_state.just_pressed(PlayerAction::Bomb))
+        .filter(|(_, _, _, count_bombs)| count_bombs.0 < MAX_BOMBS_PER_PLAYER)
         .filter(|(_, _, translation, _)| {
-            !bombs.iter().any(|bomb_transform| {
-                bomb_transform.translation.to_grid() == translation.translation.to_grid()
+            bombs.iter().all(|bomb_transform| {
+                bomb_transform.translation.to_grid() != translation.translation.to_grid()
             })
         })
         .map(|(entity, _, transform, count_bombs)| {
