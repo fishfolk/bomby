@@ -65,11 +65,11 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
         .id();
 
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 padding: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Percent(25.0), Val::Px(0.0)),
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::FlexStart,
                 align_items: AlignItems::Center,
                 ..default()
@@ -88,7 +88,7 @@ fn spawn_green_button_with_text(
     text: &str,
 ) -> Entity {
     let button_content = commands
-        .spawn_bundle(TextBundle::from_section(
+        .spawn(TextBundle::from_section(
             text,
             TextStyle {
                 font: font.0.clone(),
@@ -99,7 +99,7 @@ fn spawn_green_button_with_text(
         .id();
 
     commands
-        .spawn_bundle(NinePatchBundle {
+        .spawn(NinePatchBundle {
             style: Style {
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
@@ -117,6 +117,7 @@ fn spawn_green_button_with_text(
         .id()
 }
 
+#[derive(Resource)]
 struct ButtonNinePatch {
     texture: Handle<Image>,
     ninepatch: Handle<NinePatchBuilder<()>>,
@@ -138,6 +139,7 @@ fn load_graphics(
     })
 }
 
+#[derive(Resource)]
 struct FontHandle(Handle<Font>);
 
 fn load_font(mut commands: Commands, asset_server: Res<AssetServer>) {

@@ -4,16 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.8"
-bevy-inspector-egui = "0.12"
-iyes_loopless = "0.7"
-leafwing-input-manager = "0.5"
+bevy = "0.9"
+bevy-inspector-egui = "0.14"
+iyes_loopless = "0.9"
+leafwing-input-manager = "0.7"
 itertools = "0.10"
-bevy_ninepatch = "0.8"
-
-[dependencies.bevy_ecs_ldtk]
-version = "0.4"
-git = "https://github.com/Piturnah/bevy_ecs_ldtk"
+bevy_ninepatch = "0.9"
+bevy_ecs_ldtk = "0.5"
 
 [features]
 dev = ["bevy/dynamic"]
