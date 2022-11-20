@@ -61,6 +61,21 @@ impl ToGrid for Vec2 {
     }
 }
 
+pub trait GridNormalise {
+    /// Take some coordinate system and normalise it based on `GridCoords`, such that the new value
+    /// is the equivalent world coordinate centered on its `GridCoords`.
+    fn grid_normalised(&self) -> Vec2;
+}
+
+impl<T> GridNormalise for T
+where
+    T: ToGrid,
+{
+    fn grid_normalised(&self) -> Vec2 {
+        self.to_grid().to_world()
+    }
+}
+
 /// Detect if there is a `Spawned` event from bevy_ecs_ldtk, indicating that the level has spawned.
 /// This means we can rely on entities existing such as the player spawn points.
 pub fn level_spawned(mut level_events: EventReader<LevelEvent>) -> bool {

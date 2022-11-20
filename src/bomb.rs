@@ -4,7 +4,7 @@ use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
-    ldtk::{ToGrid, ToWorld},
+    ldtk::{GridNormalise, ToGrid},
     player::{Player, PlayerAction},
     GameState,
 };
@@ -63,11 +63,7 @@ fn spawn_bombs(
             })
         })
         .map(|(entity, _, transform, count_bombs)| {
-            (
-                entity,
-                transform.translation.to_grid().to_world(),
-                count_bombs,
-            )
+            (entity, transform.translation.grid_normalised(), count_bombs)
         })
     {
         commands
