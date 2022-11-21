@@ -11,6 +11,7 @@ use itertools::Itertools;
 use crate::{
     bomb::{Bomb, CountBombs},
     ldtk::ToGrid,
+    z_sort::{ZSort, PLAYER_Z},
     GameState,
 };
 
@@ -78,7 +79,7 @@ fn spawn_players(
 
         commands
             .spawn(SpriteSheetBundle {
-                transform: Transform::from_translation(translation.extend(10.0)),
+                transform: Transform::from_translation(translation.extend(PLAYER_Z)),
                 texture_atlas: textures
                     .0
                     .get(i)
@@ -140,6 +141,7 @@ fn spawn_players(
                 },
                 ..default()
             })
+            .insert(ZSort(PLAYER_Z))
             .insert(Name::new(player_name));
     }
 }

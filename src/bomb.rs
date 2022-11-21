@@ -6,6 +6,7 @@ use leafwing_input_manager::prelude::*;
 use crate::{
     ldtk::{GridNormalise, ToGrid},
     player::{Player, PlayerAction},
+    z_sort::{ZSort, PLAYER_Z},
     GameState,
 };
 
@@ -69,9 +70,12 @@ fn spawn_bombs(
         commands
             .spawn(SpriteSheetBundle {
                 texture_atlas: texture_atlas.0.clone(),
-                transform: Transform::from_translation(translation.extend(20.0) + Vec3::Y * 2.0),
+                transform: Transform::from_translation(
+                    translation.extend(PLAYER_Z) + Vec3::Y * 2.0,
+                ),
                 ..default()
             })
+            .insert(ZSort(PLAYER_Z))
             .insert(Bomb {
                 spawner: entity,
                 timer: Timer::from_seconds(BOMB_TIMER_SECS, TimerMode::Once),

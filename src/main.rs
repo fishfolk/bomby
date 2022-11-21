@@ -7,6 +7,7 @@ mod debug;
 mod ldtk;
 mod player;
 mod ui;
+mod z_sort;
 
 const RESOLUTION: f32 = 16.0 / 9.0;
 const WINDOW_HEIGHT: f32 = 900.0;
@@ -42,5 +43,6 @@ fn main() {
         .add_plugin(bomb::BombPlugin)
         .add_plugin(camera::CameraPlugin)
         .add_plugin(ui::UiPlugin)
+        .add_plugin(z_sort::ZSortPlugin)
         .run();
 }
