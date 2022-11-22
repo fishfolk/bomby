@@ -68,7 +68,7 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
         .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                padding: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Percent(25.0), Val::Px(0.0)),
+                padding: UiRect::top(Val::Percent(25.0)),
                 flex_direction: FlexDirection::Column,
                 justify_content: JustifyContent::FlexStart,
                 align_items: AlignItems::Center,
@@ -103,7 +103,7 @@ fn spawn_green_button_with_text(
             style: Style {
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                margin: UiRect::new(Val::Px(0.0), Val::Px(0.0), Val::Px(10.0), Val::Px(0.0)),
+                margin: UiRect::top(Val::Px(10.0)),
                 ..default()
             },
             nine_patch_data: NinePatchData::with_single_content(
