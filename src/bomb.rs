@@ -67,19 +67,20 @@ fn spawn_bombs(
             (entity, transform.translation.grid_normalised(), count_bombs)
         })
     {
-        commands
-            .spawn(SpriteSheetBundle {
+        commands.spawn((
+            SpriteSheetBundle {
                 texture_atlas: texture_atlas.0.clone(),
                 transform: Transform::from_translation(
                     translation.extend(PLAYER_Z) + Vec3::Y * 2.0,
                 ),
                 ..default()
-            })
-            .insert(ZSort(PLAYER_Z))
-            .insert(Bomb {
+            },
+            ZSort(PLAYER_Z),
+            Bomb {
                 spawner: entity,
                 timer: Timer::from_seconds(BOMB_TIMER_SECS, TimerMode::Once),
-            });
+            },
+        ));
 
         count_bombs.0 += 1;
     }

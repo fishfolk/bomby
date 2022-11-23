@@ -77,8 +77,9 @@ fn spawn_players(
             .unwrap_or_else(|| panic!("no spawn point found for player: {}", player_name))
             + Vec2::Y * -8.0;
 
-        commands
-            .spawn(SpriteSheetBundle {
+        commands.spawn((
+            Player,
+            SpriteSheetBundle {
                 transform: Transform::from_translation(translation.extend(PLAYER_Z)),
                 texture_atlas: textures
                     .0
@@ -92,18 +93,17 @@ fn spawn_players(
                     ..default()
                 },
                 ..default()
-            })
-            .insert(Player)
-            .insert(Velocity::default())
-            .insert(PlayerAnimator::default())
-            .insert(CollisionBounds {
+            },
+            Velocity::default(),
+            PlayerAnimator::default(),
+            CollisionBounds {
                 x: (-8.0, 8.0),
                 y: (0.0, 8.0),
-            })
-            .insert(CountBombs::default())
+            },
+            CountBombs::default(),
             // For testing purposes, all of the keys/controllers are hardcoded and assigned to the
             // same players each time.
-            .insert(InputManagerBundle::<PlayerAction> {
+            InputManagerBundle::<PlayerAction> {
                 input_map: match i {
                     0 => InputMap::new([(
                         VirtualDPad {
@@ -140,9 +140,10 @@ fn spawn_players(
                     _ => panic!("no input map for player: {}", player_name),
                 },
                 ..default()
-            })
-            .insert(ZSort(PLAYER_Z))
-            .insert(Name::new(player_name));
+            },
+            ZSort(PLAYER_Z),
+            Name::new(player_name),
+        ));
     }
 }
 

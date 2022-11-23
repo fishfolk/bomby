@@ -89,10 +89,11 @@ fn finish_loading(mut commands: Commands) {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn(LdtkWorldBundle {
+    commands.spawn((
+        LdtkWorldBundle {
             ldtk_handle: asset_server.load("level.ldtk"),
             ..default()
-        })
-        .insert(Name::new("LDtkWorld"));
+        },
+        Name::new("LDtkWorld"),
+    ));
 }

@@ -65,18 +65,20 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
         .id();
 
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                padding: UiRect::top(Val::Percent(25.0)),
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::FlexStart,
-                align_items: AlignItems::Center,
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                    padding: UiRect::top(Val::Percent(25.0)),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::FlexStart,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        })
-        .insert(DespawnOnExit)
+            DespawnOnExit,
+        ))
         .add_child(start_button)
         .add_child(exit_button);
 }
@@ -99,21 +101,23 @@ fn spawn_green_button_with_text(
         .id();
 
     commands
-        .spawn(NinePatchBundle {
-            style: Style {
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                margin: UiRect::top(Val::Px(10.0)),
+        .spawn((
+            NinePatchBundle {
+                style: Style {
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::top(Val::Px(10.0)),
+                    ..default()
+                },
+                nine_patch_data: NinePatchData::with_single_content(
+                    ninepatch.texture.clone(),
+                    ninepatch.ninepatch.clone(),
+                    button_content,
+                ),
                 ..default()
             },
-            nine_patch_data: NinePatchData::with_single_content(
-                ninepatch.texture.clone(),
-                ninepatch.ninepatch.clone(),
-                button_content,
-            ),
-            ..default()
-        })
-        .insert(Interaction::None)
+            Interaction::None,
+        ))
         .id()
 }
 
