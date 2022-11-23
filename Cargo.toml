@@ -4,13 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.9"
 bevy_ecs_ldtk = "0.5"
 bevy-inspector-egui = "0.14"
 bevy_ninepatch = "0.9"
 itertools = "0.10"
 iyes_loopless = "0.9"
 leafwing-input-manager = "0.7"
+
+[dependencies.bevy]
+version = "0.9"
+default_features = false
+features = [ "png", "x11" ]
 
 [features]
 dev = ["bevy/dynamic"]
