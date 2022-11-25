@@ -13,14 +13,18 @@ This game is part of the [Fish Folk](https://spicylobster.itch.io/jumpy/devlog/4
 - [Folly](https://github.com/fishfolks/folly)
 - [Ballsy](https://github.com/fishfolks/ballsy)
 
-## Disclaimer
+## Contributing
 
-This game is still in the very early stages of development! Expect it to appear unfinished and contain bugs.
+Anyone involved in the Fish Folk community must follow our [code of conduct](https://github.com/fishfolks/jumpy/blob/main/CODE_OF_CONDUCT.md).
 
-### Note on Architecture
+*Fish Folk: Bomby* is currently at an early stage of development. If you want to contribute the best way to get started is to join us at the [Spicy Lobster Discord](https://discord.gg/4smxjcheE5) or check our [issue tracker](https://github.com/fishfolk/bomby/issues).
 
-Things are still very experimental right now and the internal structure of the game is in a prototyping phase. 
-Expect that the architecture can and will change without notice during this period.
+Before committing and opening a PR, please run the following commands and follow their instructions:
+
+```console
+$ cargo clippy -D warnings
+$ cargo fmt
+```
 
 ## License
 
@@ -32,7 +36,5 @@ Expect that the architecture can and will change without notice during this peri
 at your option.
 
 Fish Folk media assets are Copyright (c) 2020-2022 Spicy Lobster Developers and licensed as [CC BY-NC](https://creativecommons.org/licenses/by-nc/4.0/).
-
-### Contributing
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
