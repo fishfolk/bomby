@@ -17,7 +17,8 @@ const BOMB_TIMER_SECS: f32 = 1.5;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
+        app.add_event::<BombExplodeEvent>()
+            .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -86,11 +87,15 @@ fn spawn_bombs(
     }
 }
 
+/// This event should fire every time a bomb explodes.
+pub struct BombExplodeEvent;
+
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
+    mut ev_explosion: EventWriter<BombExplodeEvent>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -139,6 +144,9 @@ fn update_bombs(
             }) {
                 commands.entity(entity).despawn_recursive();
             }
+
+            // Send the bomb exploded event.
+            ev_explosion.send(BombExplodeEvent);
         }
     }
 }
