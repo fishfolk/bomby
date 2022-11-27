@@ -29,19 +29,22 @@ pub struct CameraShake {
     #[inspectable(min = 0.0, max = 1.0)]
     trauma: f32,
     max_angle_rad: f32,
+    max_offset: Vec2,
+    center: Vec3,
 }
 
 impl CameraShake {
-    pub fn new(max_angle_deg: f32) -> Self {
+    pub fn new(max_angle_deg: f32, max_offset: Vec2) -> Self {
         Self {
             max_angle_rad: max_angle_deg * (std::f32::consts::PI / 180.0),
+            max_offset,
             ..default()
         }
     }
 
     #[allow(dead_code)]
-    pub fn with_trauma(trauma: f32, max_angle_deg: f32) -> Self {
-        let mut shake = Self::new(max_angle_deg);
+    pub fn with_trauma(trauma: f32, max_angle_deg: f32, max_offset: Vec2) -> Self {
+        let mut shake = Self::new(max_angle_deg, max_offset);
         shake.trauma = trauma;
         shake
     }
@@ -86,22 +89,33 @@ fn apply_shake(
     noise: Res<ShakeNoise>,
 ) {
     const SHAKE_SPEED: f32 = 3.0;
+    macro_rules! offset_noise {
+        ($offset:expr) => {
+            noise
+                .0
+                .get([((time.elapsed_seconds() + $offset) * SHAKE_SPEED).into()]) as f32
+        };
+    }
 
     for (shake, mut transform) in q.iter_mut() {
+        let sqr_trauma = shake.trauma * shake.trauma;
+
         transform.rotation = Quat::from_axis_angle(
             Vec3::Z,
-            shake.trauma
-                * shake.trauma
-                * noise.0.get([(time.elapsed_seconds() * SHAKE_SPEED).into()]) as f32
-                * shake.max_angle_rad,
+            sqr_trauma * offset_noise!(0.0) * shake.max_angle_rad,
         );
+
+        let x_offset = sqr_trauma * offset_noise!(100.0) * shake.max_offset.x;
+        let y_offset = sqr_trauma * offset_noise!(200.0) * shake.max_offset.y;
+
+        transform.translation = shake.center + Vec3::new(x_offset, y_offset, 0.0);
     }
 }
 
 /// Centers the camera on the LDtk world. Must have a single entity with `LdtkAsset` or this system
 /// will panic.
 fn center_camera(
-    mut camera_query: Query<&mut Transform, With<Camera>>,
+    mut camera_query: Query<&mut CameraShake, With<Camera>>,
     ldtk_query: Query<&Handle<LdtkAsset>>,
     ldtk_assets: Res<Assets<LdtkAsset>>,
     level: Res<LevelSelection>,
@@ -116,7 +130,7 @@ fn center_camera(
     let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
 
     let mut camera_transform = camera_query.single_mut();
-    camera_transform.translation = (level_dimensions / 2.0).extend(999.9);
+    camera_transform.center = (level_dimensions / 2.0).extend(999.9);
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -128,7 +142,7 @@ fn spawn_camera(mut commands: Commands) {
             },
             ..default()
         },
-        CameraShake::new(90.0),
+        CameraShake::new(90.0, Vec2::splat(100.0)),
     ));
     commands.insert_resource(ShakeNoise(Perlin::default()));
 }
