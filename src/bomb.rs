@@ -4,6 +4,7 @@ use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
+    camera::CameraTrauma,
     ldtk::{GridNormalise, ToGrid},
     player::{Player, PlayerAction},
     z_sort::{ZSort, PLAYER_Z},
@@ -15,10 +16,12 @@ pub struct BombPlugin;
 const MAX_BOMBS_PER_PLAYER: u8 = 2;
 const BOMB_TIMER_SECS: f32 = 1.5;
 
+/// The amount of trauma to send to the camera on an explosion.
+const BOMB_TRAUMA: f32 = 0.3;
+
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<BombExplodeEvent>()
-            .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
+        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -87,15 +90,12 @@ fn spawn_bombs(
     }
 }
 
-/// This event should fire every time a bomb explodes.
-pub struct BombExplodeEvent;
-
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
-    mut ev_explosion: EventWriter<BombExplodeEvent>,
+    mut ev_explosion: EventWriter<CameraTrauma>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -145,8 +145,8 @@ fn update_bombs(
                 commands.entity(entity).despawn_recursive();
             }
 
-            // Send the bomb exploded event.
-            ev_explosion.send(BombExplodeEvent);
+            // Add some camera shake.
+            ev_explosion.send(CameraTrauma(BOMB_TRAUMA));
         }
     }
 }

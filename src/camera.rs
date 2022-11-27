@@ -5,7 +5,7 @@ use iyes_loopless::prelude::*;
 use bevy_inspector_egui::Inspectable;
 use noise::{NoiseFn, Perlin};
 
-use crate::{bomb::BombExplodeEvent, GameState};
+use crate::GameState;
 
 pub struct CameraPlugin;
 
@@ -13,24 +13,31 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(spawn_camera)
             .add_enter_system(GameState::InGame, center_camera)
+            .add_event::<CameraTrauma>()
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
                     .with_system(apply_shake)
                     .with_system(decay_trauma)
-                    .with_system(apply_trauma_on_explosion)
+                    .with_system(apply_trauma)
                     .into(),
             );
     }
 }
 
+/// Component for an entity with camera shake.
+/// NOTE: To update the translation of such an entity, update the `center` field of this component
+/// instead. Do not update the Transform component directly.
 #[derive(Component, Inspectable, Reflect, Default)]
 pub struct CameraShake {
+    /// Value from 0-1 that indicates the intensity of the shake. Should be set with
+    /// `CameraShake::add_trauma` and not manually decayed.
     #[inspectable(min = 0.0, max = 1.0)]
     trauma: f32,
     max_angle_rad: f32,
     max_offset: Vec2,
-    center: Vec3,
+    /// The camera will always restore to this position.
+    pub center: Vec3,
 }
 
 impl CameraShake {
@@ -58,17 +65,17 @@ impl CameraShake {
     }
 }
 
-fn apply_trauma_on_explosion(
-    mut cameras: Query<&mut CameraShake>,
-    ev_explosion: EventReader<BombExplodeEvent>,
-) {
-    const BOMB_TRAUMA: f32 = 0.3;
+/// Event to add trauma to the camera. Provide a value between 0 and 1 for the trauma amount.
+pub struct CameraTrauma(pub f32);
+
+/// Apply the trauma sent by the [`CameraTrauma`] event to all the [`CameraShake`] components.
+fn apply_trauma(mut cameras: Query<&mut CameraShake>, mut ev_trauma: EventReader<CameraTrauma>) {
     cameras
         .iter_mut()
-        .for_each(|mut c| c.add_trauma(ev_explosion.len() as f32 * BOMB_TRAUMA));
+        .for_each(|mut c| c.add_trauma(ev_trauma.iter().fold(0.0, |acc, trauma| acc + trauma.0)));
 }
 
-/// Decay the trauma linearly over time
+/// Decay the trauma linearly over time.
 fn decay_trauma(mut q: Query<&mut CameraShake>, time: Res<Time>) {
     // Decays at a rate of DECAY_RATE per second. This could be converted into a field of
     // `CameraShake` if needed.
@@ -79,6 +86,7 @@ fn decay_trauma(mut q: Query<&mut CameraShake>, time: Res<Time>) {
     }
 }
 
+/// Resource that provides a source of noise for [`CameraShake`] entities to use.
 #[derive(Resource)]
 struct ShakeNoise(Perlin);
 
@@ -98,17 +106,23 @@ fn apply_shake(
     }
 
     for (shake, mut transform) in q.iter_mut() {
-        let sqr_trauma = shake.trauma * shake.trauma;
+        (transform.rotation, transform.translation) = if shake.trauma > 0.0 {
+            let sqr_trauma = shake.trauma * shake.trauma;
 
-        transform.rotation = Quat::from_axis_angle(
-            Vec3::Z,
-            sqr_trauma * offset_noise!(0.0) * shake.max_angle_rad,
-        );
+            let rotation = Quat::from_axis_angle(
+                Vec3::Z,
+                sqr_trauma * offset_noise!(0.0) * shake.max_angle_rad,
+            );
 
-        let x_offset = sqr_trauma * offset_noise!(100.0) * shake.max_offset.x;
-        let y_offset = sqr_trauma * offset_noise!(200.0) * shake.max_offset.y;
+            let x_offset = sqr_trauma * offset_noise!(100.0) * shake.max_offset.x;
+            let y_offset = sqr_trauma * offset_noise!(200.0) * shake.max_offset.y;
 
-        transform.translation = shake.center + Vec3::new(x_offset, y_offset, 0.0);
+            (rotation, shake.center + Vec3::new(x_offset, y_offset, 0.0))
+        } else {
+            // In future we may need to provide a rotation field on `CameraShake` should we need to
+            // rotate the camera in another context.
+            (Quat::IDENTITY, shake.center)
+        }
     }
 }
 
