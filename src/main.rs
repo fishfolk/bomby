@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
+mod audio;
 mod bomb;
 mod camera;
 mod debug;
@@ -37,6 +38,8 @@ fn main() {
                     ..default()
                 }),
         )
+        .add_plugin(bevy_kira_audio::AudioPlugin)
+        .add_plugin(audio::AudioPlugin)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)
