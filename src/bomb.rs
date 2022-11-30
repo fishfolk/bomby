@@ -95,6 +95,7 @@ fn spawn_bombs(
 pub struct WallDestroyedEvent;
 
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
+#[allow(clippy::too_many_arguments)]
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,

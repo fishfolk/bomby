@@ -51,7 +51,7 @@ fn bomb_explosion(
 }
 
 fn play_fuse(audio: Res<Audio>, sfx_fuse: Res<BombFuseSFX>, q: Query<Added<bomb::Bomb>>) {
-    if q.iter().any(|b| b == true) {
+    if q.iter().any(|b| b) {
         audio.play(sfx_fuse.0.clone());
     }
 }
