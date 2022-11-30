@@ -129,7 +129,6 @@ fn update_bombs(
                     .get(***parent)
                     .expect("tile must be a child of a layer")
                     .identifier
-                    .as_str()
                     == "Bombable"
             }) {
                 commands.entity(tile.0).despawn_recursive();
