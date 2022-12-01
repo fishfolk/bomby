@@ -21,7 +21,8 @@ const BOMB_TRAUMA: f32 = 0.3;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<WallDestroyedEvent>()
+        app.add_event::<PlayerDeathEvent>()
+            .add_event::<BombExplodeEvent>()
             .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system_set(
                 ConditionSet::new()
@@ -91,8 +92,11 @@ fn spawn_bombs(
     }
 }
 
-/// Event fires whenever a wall tile is destroyed.
-pub struct WallDestroyedEvent;
+/// Event fires whenever a wall player is exploded.
+pub struct PlayerDeathEvent;
+
+/// Event fires whenever a bomb explodes.
+pub struct BombExplodeEvent;
 
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
 #[allow(clippy::too_many_arguments)]
@@ -100,8 +104,9 @@ fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
-    mut ev_explosion: EventWriter<CameraTrauma>,
-    mut ev_destruction: EventWriter<WallDestroyedEvent>,
+    mut ev_trauma: EventWriter<CameraTrauma>,
+    mut ev_death: EventWriter<PlayerDeathEvent>,
+    mut ev_explosion: EventWriter<BombExplodeEvent>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -137,7 +142,6 @@ fn update_bombs(
                     .identifier
                     == "Bombable"
             }) {
-                ev_destruction.send(WallDestroyedEvent);
                 commands.entity(tile.0).despawn_recursive();
             }
 
@@ -148,11 +152,12 @@ fn update_bombs(
                     .iter()
                     .any(|(_, _, coords)| player_transform.translation.to_grid() == **coords)
             }) {
+                ev_death.send(PlayerDeathEvent);
                 commands.entity(entity).despawn_recursive();
             }
 
-            // Add some camera shake.
-            ev_explosion.send(CameraTrauma(BOMB_TRAUMA));
+            ev_explosion.send(BombExplodeEvent);
+            ev_trauma.send(CameraTrauma(BOMB_TRAUMA));
         }
     }
 }

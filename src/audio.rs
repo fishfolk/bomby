@@ -4,7 +4,7 @@ use iyes_loopless::prelude::*;
 use rand::prelude::*;
 
 use crate::{
-    bomb::{self, WallDestroyedEvent},
+    bomb::{self, BombExplodeEvent, PlayerDeathEvent},
     GameState,
 };
 
@@ -25,8 +25,8 @@ impl Plugin for AudioPlugin {
 
 fn wall_explosion(
     audio: Res<Audio>,
-    sfx_explosion: Res<WallExplosionSFX>,
-    mut ev_destruction: EventReader<WallDestroyedEvent>,
+    sfx_explosion: Res<PlayerDeathSFX>,
+    mut ev_destruction: EventReader<PlayerDeathEvent>,
 ) {
     let mut rng = thread_rng();
     ev_destruction.iter().for_each(|_| {
@@ -43,11 +43,18 @@ fn wall_explosion(
 fn bomb_explosion(
     audio: Res<Audio>,
     sfx_explosion: Res<BombExplosionSFX>,
-    ev_explosion: EventReader<crate::camera::CameraTrauma>, // FIXME temporary hack
+    mut ev_explosion: EventReader<BombExplodeEvent>, // FIXME temporary hack
 ) {
-    if !ev_explosion.is_empty() {
-        audio.play(sfx_explosion.0.clone());
-    }
+    let mut rng = thread_rng();
+    ev_explosion.iter().for_each(|_| {
+        audio.play(
+            sfx_explosion
+                .0
+                .choose(&mut rng)
+                .expect("resource should always contain at least one handle")
+                .clone(),
+        );
+    });
 }
 
 fn play_fuse(audio: Res<Audio>, sfx_fuse: Res<BombFuseSFX>, q: Query<Added<bomb::Bomb>>) {
@@ -56,23 +63,28 @@ fn play_fuse(audio: Res<Audio>, sfx_fuse: Res<BombFuseSFX>, q: Query<Added<bomb:
     }
 }
 
+/// Handle to the SFX for the fuse sound when a bomb is placed.
 #[derive(Resource)]
 struct BombFuseSFX(Handle<AudioSource>);
 
+/// Handles to sounds used when a bomb explodes.
 #[derive(Resource)]
-struct WallExplosionSFX(Vec<Handle<AudioSource>>);
+struct BombExplosionSFX(Vec<Handle<AudioSource>>);
 
+/// Handles to sounds used when a wall is destroyed.
 #[derive(Resource)]
-struct BombExplosionSFX(Handle<AudioSource>);
+struct PlayerDeathSFX(Vec<Handle<AudioSource>>);
 
 fn load_audio(mut commands: Commands, assets: Res<AssetServer>) {
     commands.insert_resource(BombFuseSFX(assets.load("sfx/fuse.ogg")));
-    commands.insert_resource(BombExplosionSFX(assets.load("sfx/8bit_bomb_explosion.wav")));
 
-    let sfx_explosions: Vec<_> = (1..9)
-        // Since we know at compile time all the filepaths, is there a way to avoid heap allocation
-        // here?
-        .map(|i| assets.load(format!("sfx/explosions/explosion0{i}.wav")))
-        .collect();
-    commands.insert_resource(WallExplosionSFX(sfx_explosions));
+    commands.insert_resource(BombExplosionSFX(vec![
+        assets.load("sfx/explosions/explosion_1.wav"),
+        assets.load("sfx/explosions/explosion_2.wav"),
+    ]));
+
+    commands.insert_resource(PlayerDeathSFX(vec![
+        assets.load("sfx/explosions/explosion_4.wav"),
+        assets.load("sfx/explosions/explosion_5.wav"),
+    ]));
 }
