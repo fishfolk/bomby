@@ -4,6 +4,7 @@ use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
+    audio::PlaySfx,
     camera::CameraTrauma,
     ldtk::{GridNormalise, ToGrid},
     player::{Player, PlayerAction},
@@ -21,7 +22,9 @@ const BOMB_TRAUMA: f32 = 0.3;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
+        app.add_event::<PlayerDeathEvent>()
+            .add_event::<BombExplodeEvent>()
+            .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -57,6 +60,7 @@ fn spawn_bombs(
     >,
     texture_atlas: Res<BombSprite>,
     bombs: Query<&Transform, With<Bomb>>,
+    mut ev_sfx: EventWriter<PlaySfx>,
 ) {
     for (entity, translation, mut count_bombs) in players
         .iter_mut()
@@ -87,15 +91,25 @@ fn spawn_bombs(
         ));
 
         count_bombs.0 += 1;
+
+        ev_sfx.send(PlaySfx::BombFuse);
     }
 }
 
+/// Event fires whenever a wall player is exploded.
+pub struct PlayerDeathEvent;
+
+/// Event fires whenever a bomb explodes.
+pub struct BombExplodeEvent;
+
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
+#[allow(clippy::too_many_arguments)]
 fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
-    mut ev_explosion: EventWriter<CameraTrauma>,
+    mut ev_trauma: EventWriter<CameraTrauma>,
+    mut ev_sfx: EventWriter<PlaySfx>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -129,7 +143,6 @@ fn update_bombs(
                     .get(***parent)
                     .expect("tile must be a child of a layer")
                     .identifier
-                    .as_str()
                     == "Bombable"
             }) {
                 commands.entity(tile.0).despawn_recursive();
@@ -142,11 +155,12 @@ fn update_bombs(
                     .iter()
                     .any(|(_, _, coords)| player_transform.translation.to_grid() == **coords)
             }) {
+                ev_sfx.send(PlaySfx::PlayerDeath);
                 commands.entity(entity).despawn_recursive();
             }
 
-            // Add some camera shake.
-            ev_explosion.send(CameraTrauma(BOMB_TRAUMA));
+            ev_sfx.send(PlaySfx::BombExplosion);
+            ev_trauma.send(CameraTrauma(BOMB_TRAUMA));
         }
     }
 }
