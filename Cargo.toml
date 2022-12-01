@@ -13,7 +13,7 @@ leafwing-input-manager = "0.7"
 
 itertools = "0.10"
 noise = { git = "https://github.com/bsurmanski/noise-rs", rev = "5abdde1b819eccc47e74969c15e1b56ae5a055d6" }
-rand = "0.8"
+rand = { version = "0.8", default_features = false, features = ["std", "small_rng"] }
 
 [dependencies.bevy]
 version = "0.9"

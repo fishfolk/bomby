@@ -5,7 +5,7 @@ use rand::prelude::*;
 
 use crate::{
     bomb::{self, BombExplodeEvent, PlayerDeathEvent},
-    GameState,
+    GameRng, GameState,
 };
 
 pub struct AudioPlugin;
@@ -17,23 +17,23 @@ impl Plugin for AudioPlugin {
                 .run_in_state(GameState::InGame)
                 .with_system(play_fuse)
                 .with_system(bomb_explosion)
-                .with_system(wall_explosion)
+                .with_system(player_death)
                 .into(),
         );
     }
 }
 
-fn wall_explosion(
+fn player_death(
     audio: Res<Audio>,
     sfx_explosion: Res<PlayerDeathSFX>,
+    mut rng: ResMut<GameRng>,
     mut ev_destruction: EventReader<PlayerDeathEvent>,
 ) {
-    let mut rng = thread_rng();
     ev_destruction.iter().for_each(|_| {
         audio.play(
             sfx_explosion
                 .0
-                .choose(&mut rng)
+                .choose(&mut rng.0)
                 .expect("resource should always contain at least one handle")
                 .clone(),
         );
@@ -43,14 +43,14 @@ fn wall_explosion(
 fn bomb_explosion(
     audio: Res<Audio>,
     sfx_explosion: Res<BombExplosionSFX>,
-    mut ev_explosion: EventReader<BombExplodeEvent>, // FIXME temporary hack
+    mut ev_explosion: EventReader<BombExplodeEvent>,
+    mut rng: ResMut<GameRng>,
 ) {
-    let mut rng = thread_rng();
     ev_explosion.iter().for_each(|_| {
         audio.play(
             sfx_explosion
                 .0
-                .choose(&mut rng)
+                .choose(&mut rng.0)
                 .expect("resource should always contain at least one handle")
                 .clone(),
         );
@@ -59,7 +59,7 @@ fn bomb_explosion(
 
 fn play_fuse(audio: Res<Audio>, sfx_fuse: Res<BombFuseSFX>, q: Query<Added<bomb::Bomb>>) {
     if q.iter().any(|b| b) {
-        audio.play(sfx_fuse.0.clone());
+        audio.play(sfx_fuse.0.clone()).with_volume(0.5);
     }
 }
 

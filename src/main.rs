@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
+use rand::{rngs::SmallRng, SeedableRng};
+
 mod audio;
 mod bomb;
 mod camera;
@@ -20,6 +22,9 @@ pub enum GameState {
     LoadingLevel,
     InGame,
 }
+
+#[derive(Resource)]
+pub struct GameRng(SmallRng);
 
 fn main() {
     App::new()
@@ -47,5 +52,6 @@ fn main() {
         .add_plugin(camera::CameraPlugin)
         .add_plugin(ui::UiPlugin)
         .add_plugin(z_sort::ZSortPlugin)
+        .insert_resource(GameRng(SmallRng::from_entropy()))
         .run();
 }
