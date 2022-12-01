@@ -22,9 +22,7 @@ const BOMB_TRAUMA: f32 = 0.3;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerDeathEvent>()
-            .add_event::<BombExplodeEvent>()
-            .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
+        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -95,12 +93,6 @@ fn spawn_bombs(
         ev_sfx.send(PlaySfx::BombFuse);
     }
 }
-
-/// Event fires whenever a wall player is exploded.
-pub struct PlayerDeathEvent;
-
-/// Event fires whenever a bomb explodes.
-pub struct BombExplodeEvent;
 
 /// Tick the bomb timers. If fully elapsed, destroy the bomb and surrounding bombable tiles.
 #[allow(clippy::too_many_arguments)]
