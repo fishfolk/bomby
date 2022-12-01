@@ -4,6 +4,7 @@ use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
+    audio::PlaySfx,
     camera::CameraTrauma,
     ldtk::{GridNormalise, ToGrid},
     player::{Player, PlayerAction},
@@ -59,6 +60,7 @@ fn spawn_bombs(
     >,
     texture_atlas: Res<BombSprite>,
     bombs: Query<&Transform, With<Bomb>>,
+    mut ev_sfx: EventWriter<PlaySfx>,
 ) {
     for (entity, translation, mut count_bombs) in players
         .iter_mut()
@@ -89,6 +91,8 @@ fn spawn_bombs(
         ));
 
         count_bombs.0 += 1;
+
+        ev_sfx.send(PlaySfx::BombFuse);
     }
 }
 
@@ -105,8 +109,7 @@ fn update_bombs(
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
     mut ev_trauma: EventWriter<CameraTrauma>,
-    mut ev_death: EventWriter<PlayerDeathEvent>,
-    mut ev_explosion: EventWriter<BombExplodeEvent>,
+    mut ev_sfx: EventWriter<PlaySfx>,
     time: Res<Time>,
     tiles: Query<(Entity, &Parent, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
@@ -152,11 +155,11 @@ fn update_bombs(
                     .iter()
                     .any(|(_, _, coords)| player_transform.translation.to_grid() == **coords)
             }) {
-                ev_death.send(PlayerDeathEvent);
+                ev_sfx.send(PlaySfx::PlayerDeath);
                 commands.entity(entity).despawn_recursive();
             }
 
-            ev_explosion.send(BombExplodeEvent);
+            ev_sfx.send(PlaySfx::BombExplosion);
             ev_trauma.send(CameraTrauma(BOMB_TRAUMA));
         }
     }
