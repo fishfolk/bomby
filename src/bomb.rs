@@ -130,12 +130,13 @@ fn update_bombs(
                 .collect::<Vec<_>>();
 
             // Destroy bombable tiles within 1 orthogonal tile
-            for tile in affected_tiles.iter().filter(|(_, parent, _)| {
-                ldtk_layer_meta_q
-                    .get(***parent)
-                    .expect("tile must be a child of a layer")
-                    .identifier
-                    == "Bombable"
+            for tile in affected_tiles.iter().filter(|(_, parent, coords)| {
+                if let Ok(ldtk_layer) = ldtk_layer_meta_q.get(***parent) {
+                    ldtk_layer.identifier == "Bombable"
+                } else {
+                    warn!("LDtk tile not child of a layer with coords: {:?}", coords);
+                    false
+                }
             }) {
                 commands.entity(tile.0).despawn_recursive();
             }

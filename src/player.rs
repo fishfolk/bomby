@@ -216,14 +216,12 @@ fn player_collisions(
         .iter()
         .filter(|(parent, coords)| {
             bomb_tiles.iter().any(|b| b == *coords)
-                || matches!(
-                    ldtk_layer_meta_q
-                        .get(***parent)
-                        .expect("tile must be a child of a layer")
-                        .identifier
-                        .as_str(),
-                    "Maze" | "Bombable"
-                )
+                || if let Ok(ldtk_layer) = ldtk_layer_meta_q.get(***parent) {
+                    matches!(ldtk_layer.identifier.as_str(), "Maze" | "Bombable")
+                } else {
+                    warn!("LDtk tile not child of a layer with coords: {:?}", coords);
+                    false
+                }
         })
         .map(|(_, coords)| coords)
         .collect::<Vec<_>>();
