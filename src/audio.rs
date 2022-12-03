@@ -31,6 +31,7 @@ impl Plugin for AudioPlugin {
 struct BgmChannel;
 
 /// Event for SFX.
+#[derive(Debug)]
 pub enum PlaySfx {
     PlayerDeath,
     BombExplosion,
@@ -47,9 +48,11 @@ fn start_fight_bgm(
     assets: Res<AssetServer>,
     mut rng: ResMut<GameRng>,
 ) {
-    audio
-        .play(assets.load(*bgm.in_game.choose(&mut rng.0).unwrap()))
-        .looped();
+    if let Some(audio_path) = bgm.in_game.choose(&mut rng.0) {
+        audio.play(assets.load(*audio_path)).looped();
+    } else {
+        warn!("no paths to music files found in Bgm.in_game");
+    }
 }
 
 fn stop_bgm(audio: Res<AudioChannel<BgmChannel>>) {
@@ -69,16 +72,17 @@ fn play_sfx(
                 audio.play(sfx.bomb_fuse.clone()).with_volume(0.5);
             }
             PlayerDeath | BombExplosion => {
-                audio.play(
-                    match ev {
-                        PlayerDeath => &sfx.player_death,
-                        BombExplosion => &sfx.bomb_explosion,
-                        _ => unreachable!(),
-                    }
-                    .choose(&mut rng.0)
-                    .expect("resource should always contain at least one handle")
-                    .clone(),
-                );
+                if let Some(audio_handle) = match ev {
+                    PlayerDeath => &sfx.player_death,
+                    BombExplosion => &sfx.bomb_explosion,
+                    _ => unreachable!(),
+                }
+                .choose(&mut rng.0)
+                {
+                    audio.play(audio_handle.clone());
+                } else {
+                    warn!("no handles to SFX for {:?}", ev);
+                }
             }
         }
     }
