@@ -67,23 +67,21 @@ fn play_sfx(
 ) {
     use PlaySfx::*;
     for ev in ev_sfx.iter() {
-        match ev {
-            BombFuse => {
-                audio.play(sfx.bomb_fuse.clone()).with_volume(0.5);
-            }
-            PlayerDeath | BombExplosion => {
-                if let Some(audio_handle) = match ev {
-                    PlayerDeath => &sfx.player_death,
-                    BombExplosion => &sfx.bomb_explosion,
-                    _ => unreachable!(),
-                }
-                .choose(&mut rng.0)
-                {
+        macro_rules! random_track {
+            ($handles:expr) => {
+                if let Some(audio_handle) = $handles.choose(&mut rng.0) {
                     audio.play(audio_handle.clone());
                 } else {
                     warn!("no handles to SFX for {:?}", ev);
                 }
+            };
+        }
+        match ev {
+            BombFuse => {
+                audio.play(sfx.bomb_fuse.clone()).with_volume(0.5);
             }
+            BombExplosion => random_track!(&sfx.bomb_explosion),
+            PlayerDeath => random_track!(&sfx.player_death),
         }
     }
 }
