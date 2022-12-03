@@ -25,13 +25,13 @@ impl Plugin for PlayerPlugin {
             .insert_resource(CountPlayers(4))
             .add_plugin(InputManagerPlugin::<PlayerAction>::default())
             .add_enter_system(GameState::InGame, spawn_players)
-            .add_system(
-                movement_input
-                    .pipe(player_collisions)
-                    .pipe(update_position)
-                    .run_in_state(GameState::InGame),
-            )
-            .add_system(animate_player.run_in_state(GameState::InGame));
+            .add_system_set(
+                ConditionSet::new()
+                    .run_in_state(GameState::InGame)
+                    .with_system(movement_input.pipe(player_collisions).pipe(update_position))
+                    .with_system(animate_player)
+                    .into(),
+            );
     }
 }
 
