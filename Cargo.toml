@@ -11,9 +11,13 @@ bevy_ninepatch = "0.9"
 iyes_loopless = "0.9"
 leafwing-input-manager = "0.7"
 
+directories = "4.0"
 itertools = "0.10"
 noise = { git = "https://github.com/bsurmanski/noise-rs", rev = "5abdde1b819eccc47e74969c15e1b56ae5a055d6" }
 rand = { version = "0.8", default_features = false, features = ["std", "small_rng"] }
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.5"
 
 [dependencies.bevy]
 version = "0.9"

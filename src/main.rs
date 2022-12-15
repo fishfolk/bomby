@@ -6,6 +6,7 @@ use rand::{rngs::SmallRng, SeedableRng};
 mod audio;
 mod bomb;
 mod camera;
+mod config;
 mod debug;
 mod ldtk;
 mod player;
@@ -27,6 +28,8 @@ pub enum GameState {
 pub struct GameRng(SmallRng);
 
 fn main() {
+    let config = config::load_config();
+
     App::new()
         .add_loopless_state(GameState::MainMenu)
         .add_plugins(
@@ -37,7 +40,7 @@ fn main() {
                         width: WINDOW_WIDTH,
                         height: WINDOW_HEIGHT,
                         title: "Bomby!".to_string(),
-                        resizable: false,
+                        resizable: config.resizable_window,
                         ..default()
                     },
                     ..default()
@@ -45,6 +48,7 @@ fn main() {
         )
         .add_plugin(bevy_kira_audio::AudioPlugin)
         .add_plugin(audio::AudioPlugin)
+        .add_plugin(config::ConfigPlugin)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)
@@ -53,5 +57,6 @@ fn main() {
         .add_plugin(ui::UiPlugin)
         .add_plugin(z_sort::ZSortPlugin)
         .insert_resource(GameRng(SmallRng::from_entropy()))
+        .insert_resource(config)
         .run();
 }

@@ -3,7 +3,7 @@ use bevy_kira_audio::prelude::*;
 use iyes_loopless::prelude::*;
 use rand::prelude::*;
 
-use crate::{GameRng, GameState};
+use crate::{config::Config, GameRng, GameState};
 
 pub struct AudioPlugin;
 
@@ -11,11 +11,13 @@ impl Plugin for AudioPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PlaySfx>()
             .add_audio_channel::<BgmChannel>()
+            .add_audio_channel::<SfxChannel>()
             .add_startup_system(load_audio)
             .add_enter_system(GameState::MainMenu, start_title_bgm)
             .add_enter_system(GameState::InGame, start_fight_bgm)
             .add_exit_system(GameState::MainMenu, stop_bgm)
             .add_exit_system(GameState::InGame, stop_bgm)
+            .add_system(set_volume)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -25,10 +27,13 @@ impl Plugin for AudioPlugin {
     }
 }
 
-/// Resource for the background music channel. Exists so in future a user may change BGM volume
-/// independently of SFX.
+/// Resource for the background music channel.
 #[derive(Resource)]
 struct BgmChannel;
+
+/// Resource for the sound effects channel.
+#[derive(Resource)]
+struct SfxChannel;
 
 /// Event for SFX.
 #[derive(Debug)]
@@ -36,6 +41,18 @@ pub enum PlaySfx {
     PlayerDeath,
     BombExplosion,
     BombFuse,
+}
+
+/// Update the channel volumes if the config has changed.
+fn set_volume(
+    bgm_channel: Res<AudioChannel<BgmChannel>>,
+    sfx_channel: Res<AudioChannel<SfxChannel>>,
+    config: Res<Config>,
+) {
+    if config.is_changed() {
+        bgm_channel.set_volume(config.bgm_volume);
+        sfx_channel.set_volume(config.sfx_volume);
+    }
 }
 
 fn start_title_bgm(audio: Res<AudioChannel<BgmChannel>>, bgm: Res<Bgm>) {
@@ -60,7 +77,7 @@ fn stop_bgm(audio: Res<AudioChannel<BgmChannel>>) {
 }
 
 fn play_sfx(
-    audio: Res<Audio>,
+    audio: Res<AudioChannel<SfxChannel>>,
     sfx: Res<Sfx>,
     mut rng: ResMut<GameRng>,
     mut ev_sfx: EventReader<PlaySfx>,
