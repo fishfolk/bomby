@@ -131,12 +131,13 @@ fn update_bombs(
 
             // Destroy bombable tiles within 1 orthogonal tile
             for tile in affected_tiles.iter().filter(|(_, parent, coords)| {
-                if let Ok(ldtk_layer) = ldtk_layer_meta_q.get(***parent) {
-                    ldtk_layer.identifier == "Bombable"
-                } else {
-                    warn!("LDtk tile not child of a layer with coords: {:?}", coords);
-                    false
-                }
+                ldtk_layer_meta_q.get(***parent).map_or_else(
+                    |_| {
+                        warn!("LDtk tile not child of a layer with coords: {coords:?}");
+                        false
+                    },
+                    |ldtk_layer| ldtk_layer.identifier == "Bombable",
+                )
             }) {
                 commands.entity(tile.0).despawn_recursive();
             }
@@ -165,7 +166,7 @@ fn animate_bombs(mut bombs: Query<(&Bomb, &mut Transform)>) {
             + (Vec2::ONE
                 * 0.1
                 * ((16.0 * std::f32::consts::PI / 6.0) * bomb.timer.elapsed_secs()).sin())
-            .extend(1.0)
+            .extend(1.0);
     }
 }
 

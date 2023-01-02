@@ -74,7 +74,7 @@ fn spawn_players(
             .filter(|(_, ldtk_entity)| ldtk_entity.identifier == player_name)
             .map(|(transform, _)| transform.translation.truncate())
             .next()
-            .unwrap_or_else(|| panic!("no spawn point found for player: {}", player_name))
+            .unwrap_or_else(|| panic!("no spawn point found for player: {player_name}"))
             + Vec2::Y * -8.0;
 
         commands.spawn((
@@ -84,7 +84,7 @@ fn spawn_players(
                 texture_atlas: textures
                     .0
                     .get(i)
-                    .unwrap_or_else(|| panic!("no sprite sheet for player: {}", player_name))
+                    .unwrap_or_else(|| panic!("no sprite sheet for player: {player_name}"))
                     .clone(),
                 sprite: TextureAtlasSprite {
                     index: 0,
@@ -137,7 +137,7 @@ fn spawn_players(
                         .insert(GamepadButtonType::East, PlayerAction::Bomb)
                         .set_gamepad(Gamepad { id: 1 })
                         .build(),
-                    _ => panic!("no input map for player: {}", player_name),
+                    _ => panic!("no input map for player: {player_name}"),
                 },
                 ..default()
             },
@@ -216,12 +216,13 @@ fn player_collisions(
         .iter()
         .filter(|(parent, coords)| {
             bomb_tiles.iter().any(|b| b == *coords)
-                || if let Ok(ldtk_layer) = ldtk_layer_meta_q.get(***parent) {
-                    matches!(ldtk_layer.identifier.as_str(), "Maze" | "Bombable")
-                } else {
-                    warn!("LDtk tile not child of a layer with coords: {:?}", coords);
-                    false
-                }
+                || ldtk_layer_meta_q.get(***parent).map_or_else(
+                    |_| {
+                        warn!("LDtk tile not child of a layer with coords: {coords:?}");
+                        false
+                    },
+                    |ldtk_layer| matches!(ldtk_layer.identifier.as_str(), "Maze" | "Bombable"),
+                )
         })
         .map(|(_, coords)| coords)
         .collect::<Vec<_>>();

@@ -1,3 +1,5 @@
+#![warn(clippy::semicolon_if_nothing_returned, clippy::uninlined_format_args)]
+
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
 
