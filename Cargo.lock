@@ -959,6 +959,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_derive",
+ "serde_ignored",
  "toml",
 ]
 
@@ -2941,6 +2942,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_ignored"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51212eb6171778353d78ef5860fdffe29ac17f03a69375d2dc14fbb5754d54a4"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

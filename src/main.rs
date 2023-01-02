@@ -28,8 +28,6 @@ pub enum GameState {
 pub struct GameRng(SmallRng);
 
 fn main() {
-    let config = config::load_config();
-
     App::new()
         .add_loopless_state(GameState::MainMenu)
         .add_plugins(
@@ -40,7 +38,7 @@ fn main() {
                         width: WINDOW_WIDTH,
                         height: WINDOW_HEIGHT,
                         title: "Bomby!".to_string(),
-                        resizable: config.resizable_window,
+                        resizable: true,
                         ..default()
                     },
                     ..default()
@@ -57,6 +55,16 @@ fn main() {
         .add_plugin(ui::UiPlugin)
         .add_plugin(z_sort::ZSortPlugin)
         .insert_resource(GameRng(SmallRng::from_entropy()))
-        .insert_resource(config)
+        .add_system(set_window_resizable)
         .run();
+}
+
+/// System that detects if the [`Config`](config::Config) was changed and accordingly updates the
+/// window descriptor.
+fn set_window_resizable(config: Res<config::Config>, mut windows: ResMut<Windows>) {
+    if config.is_changed() {
+        let window = windows.primary_mut();
+        window.set_resolution(config.window_width, config.window_height);
+        window.set_resizable(config.window_resizable);
+    }
 }
