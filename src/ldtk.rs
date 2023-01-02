@@ -76,7 +76,7 @@ where
     }
 }
 
-/// Detect if there is a `Spawned` event from bevy_ecs_ldtk, indicating that the level has spawned.
+/// Detect if there is a `Spawned` event from [`bevy_ecs_ldtk`], indicating that the level has spawned.
 /// This means we can rely on entities existing such as the player spawn points.
 pub fn level_spawned(mut level_events: EventReader<LevelEvent>) -> bool {
     level_events

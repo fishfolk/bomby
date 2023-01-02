@@ -140,7 +140,7 @@ fn load_graphics(
     commands.insert_resource(ButtonNinePatch {
         texture: button_ninepatch_texture,
         ninepatch: button_ninepatch_handle,
-    })
+    });
 }
 
 #[derive(Resource)]
