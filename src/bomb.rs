@@ -6,7 +6,7 @@ use leafwing_input_manager::prelude::*;
 use crate::{
     audio::PlaySfx,
     camera::CameraTrauma,
-    ldtk::{GridNormalise, ToGrid},
+    ldtk::{GridNormalise, ToGrid, ToWorld},
     player::{Player, PlayerAction},
     z_sort::{ZSort, PLAYER_Z},
     GameState,
@@ -29,6 +29,7 @@ impl Plugin for BombPlugin {
                     .with_system(spawn_bombs)
                     .with_system(update_bombs)
                     .with_system(animate_bombs)
+                    .with_system(decay_explosion)
                     .into(),
             );
     }
@@ -129,6 +130,33 @@ fn update_bombs(
                 })
                 .collect::<Vec<_>>();
 
+            for tile in affected_tiles.iter().filter(|(_, _, affected_coords)| {
+                !tiles
+                    .iter()
+                    .filter(|(_, _, coords)| affected_coords == coords)
+                    .any(|(_, parent, coords)| {
+                        if let Ok(ldtk_layer) = ldtk_layer_meta_q.get(**parent) {
+                            ldtk_layer.identifier == "Maze"
+                        } else {
+                            warn!("LDtk tile not child of a layer with coords: {:?}", coords);
+                            false
+                        }
+                    })
+            }) {
+                commands.spawn((
+                    SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::RED,
+                            custom_size: Some(Vec2::splat(32.0)),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(tile.2.to_world().extend(10.0)),
+                        ..default()
+                    },
+                    Explosion(Timer::from_seconds(0.6, TimerMode::Once)),
+                ));
+            }
+
             // Destroy bombable tiles within 1 orthogonal tile
             for tile in affected_tiles.iter().filter(|(_, parent, coords)| {
                 ldtk_layer_meta_q.get(***parent).map_or_else(
@@ -156,6 +184,26 @@ fn update_bombs(
             ev_sfx.send(PlaySfx::BombExplosion);
             ev_trauma.send(CameraTrauma(BOMB_TRAUMA));
         }
+    }
+}
+
+/// This is a temporary explosion implementation to play with settings.
+#[derive(Component)]
+struct Explosion(Timer);
+
+fn decay_explosion(
+    mut commands: Commands,
+    mut q: Query<(Entity, &mut Sprite, &mut Explosion)>,
+    time: Res<Time>,
+) {
+    for (e, mut tile, mut timer) in q.iter_mut() {
+        timer.0.tick(time.delta());
+        if timer.0.just_finished() {
+            commands.entity(e).despawn_recursive();
+        }
+        tile.color.set_a(
+            1.0 - timer.0.elapsed().as_millis() as f32 / timer.0.duration().as_millis() as f32,
+        );
     }
 }
 
