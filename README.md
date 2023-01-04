@@ -22,7 +22,7 @@ Anyone involved in the Fish Folk community must follow our [code of conduct](htt
 Before committing and opening a PR, please run the following commands and follow their instructions:
 
 ```console
-$ cargo clippy -D warnings
+$ cargo clippy
 $ cargo fmt
 ```
 
