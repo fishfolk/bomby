@@ -8,6 +8,7 @@ use rand::{rngs::SmallRng, SeedableRng};
 mod audio;
 mod bomb;
 mod camera;
+mod config;
 mod debug;
 mod ldtk;
 mod player;
@@ -39,7 +40,7 @@ fn main() {
                         width: WINDOW_WIDTH,
                         height: WINDOW_HEIGHT,
                         title: "Bomby!".to_string(),
-                        resizable: false,
+                        resizable: true,
                         ..default()
                     },
                     ..default()
@@ -47,6 +48,7 @@ fn main() {
         )
         .add_plugin(bevy_kira_audio::AudioPlugin)
         .add_plugin(audio::AudioPlugin)
+        .add_plugin(config::ConfigPlugin)
         .add_plugin(debug::DebugPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(ldtk::BombyLdtkPlugin)
@@ -55,5 +57,16 @@ fn main() {
         .add_plugin(ui::UiPlugin)
         .add_plugin(z_sort::ZSortPlugin)
         .insert_resource(GameRng(SmallRng::from_entropy()))
+        .add_system(set_window_resizable)
         .run();
+}
+
+/// System that detects if the [`Config`](config::Config) was changed and accordingly updates the
+/// window descriptor.
+fn set_window_resizable(config: Res<config::Config>, mut windows: ResMut<Windows>) {
+    if config.is_changed() {
+        let window = windows.primary_mut();
+        window.set_resolution(config.window_width, config.window_height);
+        window.set_resizable(config.window_resizable);
+    }
 }
