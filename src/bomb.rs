@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
-use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::{
@@ -22,15 +21,10 @@ const BOMB_TRAUMA: f32 = 0.3;
 
 impl Plugin for BombPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::InGame)
-                    .with_system(spawn_bombs)
-                    .with_system(update_bombs)
-                    .with_system(animate_bombs)
-                    .into(),
-            );
+        app.add_systems(PreStartup, load_graphics).add_systems(
+            Update,
+            (spawn_bombs, update_bombs, animate_bombs).run_if(in_state(GameState::InGame)),
+        );
     }
 }
 
@@ -62,7 +56,7 @@ fn spawn_bombs(
 ) {
     for (entity, translation, mut count_bombs) in players
         .iter_mut()
-        .filter(|(_, action_state, _, _)| action_state.just_pressed(PlayerAction::Bomb))
+        .filter(|(_, action_state, _, _)| action_state.just_pressed(&PlayerAction::Bomb))
         .filter(|(_, _, _, count_bombs)| count_bombs.0 < MAX_BOMBS_PER_PLAYER)
         .filter(|(_, _, translation, _)| {
             bombs.iter().all(|bomb_transform| {
@@ -74,13 +68,8 @@ fn spawn_bombs(
         })
     {
         commands.spawn((
-            SpriteSheetBundle {
-                texture_atlas: texture_atlas.0.clone(),
-                transform: Transform::from_translation(
-                    translation.extend(PLAYER_Z) + Vec3::Y * 2.0,
-                ),
-                ..default()
-            },
+            Sprite::from_atlas_image(texture_atlas.0.clone(), texture_atlas.1.clone().into()),
+            Transform::from_translation(translation.extend(PLAYER_Z) + Vec3::Y * 2.0),
             ZSort(PLAYER_Z),
             Bomb {
                 spawner: entity,
@@ -171,22 +160,21 @@ fn animate_bombs(mut bombs: Query<(&Bomb, &mut Transform)>) {
 }
 
 #[derive(Resource)]
-pub struct BombSprite(Handle<TextureAtlas>);
+pub struct BombSprite(Handle<Image>, Handle<TextureAtlasLayout>);
 
 fn load_graphics(
     mut commands: Commands,
     assets: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let image = assets.load("Bomb.png");
-    let atlas = TextureAtlas::from_grid(
-        image,
-        Vec2::new(32.0, 33.0),
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::new(32, 33),
         1,
         1,
-        Some(Vec2::ZERO),
-        Some(Vec2::new(0.0, 11.0)),
+        Some(UVec2::ZERO),
+        Some(UVec2::new(0, 11)),
     );
-    let atlas_handle = texture_atlases.add(atlas);
-    commands.insert_resource(BombSprite(atlas_handle));
+    let layout_handle = texture_atlases.add(layout);
+    commands.insert_resource(BombSprite(image, layout_handle));
 }

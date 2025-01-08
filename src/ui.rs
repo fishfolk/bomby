@@ -1,6 +1,4 @@
 use bevy::prelude::*;
-use bevy_ninepatch::*;
-use iyes_loopless::prelude::*;
 
 use bevy::app::AppExit;
 
@@ -10,12 +8,14 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(NinePatchPlugin::<()>::default())
-            .add_startup_system_to_stage(StartupStage::PreStartup, load_font)
-            .add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
-            .add_enter_system(GameState::MainMenu, setup)
-            .add_system(detect_button_presses.run_in_state(GameState::MainMenu))
-            .add_exit_system(GameState::MainMenu, despawn_ui);
+        app//.add_plugin(NinePatchPlugin::<()>::default())
+            .add_systems(PreStartup, (load_font, load_graphics))
+            .add_systems(OnEnter(GameState::MainMenu), setup)
+            .add_systems(
+                Update,
+                detect_button_presses.run_if(in_state(GameState::MainMenu)),
+            )
+            .add_systems(OnExit(GameState::MainMenu), despawn_ui);
     }
 }
 
