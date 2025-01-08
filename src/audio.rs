@@ -13,11 +13,11 @@ impl Plugin for AudioPlugin {
             .add_audio_channel::<BgmChannel>()
             .add_audio_channel::<SfxChannel>()
             .add_startup_system(load_audio)
+            .add_startup_system(set_volume)
             .add_enter_system(GameState::MainMenu, start_title_bgm)
             .add_enter_system(GameState::InGame, start_fight_bgm)
             .add_exit_system(GameState::MainMenu, stop_bgm)
             .add_exit_system(GameState::InGame, stop_bgm)
-            .add_system(set_volume)
             .add_system_set(
                 ConditionSet::new()
                     .run_in_state(GameState::InGame)
@@ -43,16 +43,14 @@ pub enum PlaySfx {
     BombFuse,
 }
 
-/// Update the channel volumes if the config has changed.
+/// Update the channel volumes based on values in the [`Config`] resource.
 fn set_volume(
     bgm_channel: Res<AudioChannel<BgmChannel>>,
     sfx_channel: Res<AudioChannel<SfxChannel>>,
     config: Res<Config>,
 ) {
-    if config.is_changed() {
-        bgm_channel.set_volume(config.bgm_volume);
-        sfx_channel.set_volume(config.sfx_volume);
-    }
+    bgm_channel.set_volume(config.bgm_volume);
+    sfx_channel.set_volume(config.sfx_volume);
 }
 
 fn start_title_bgm(audio: Res<AudioChannel<BgmChannel>>, bgm: Res<Bgm>) {

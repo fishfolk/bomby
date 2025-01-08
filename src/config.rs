@@ -2,6 +2,9 @@
 //! example:
 //!
 //! Linux: `~/.config/bomby/config.toml`
+//!
+//! Currently, the config is loaded at startup and cannot be changed from inside the game. So, this
+//! module does not export a bevy plugin (yet).
 
 use bevy::prelude::*;
 
@@ -9,6 +12,10 @@ use directories::ProjectDirs;
 use serde_derive::{Deserialize, Serialize};
 
 use std::fs;
+
+const DEFAULT_ASPECT_RATIO: f32 = 16.0 / 9.0;
+const DEFAULT_WINDOW_HEIGHT: f32 = 900.0;
+const DEFAULT_WINDOW_WIDTH: f32 = DEFAULT_WINDOW_HEIGHT * DEFAULT_ASPECT_RATIO;
 
 /// Config resource containing runtime settings for the game.
 #[derive(Resource, Debug, Serialize, Deserialize)]
@@ -25,24 +32,16 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             window_resizable: true,
-            window_width: 1600.0,
-            window_height: 900.0,
+            window_width: DEFAULT_WINDOW_WIDTH,
+            window_height: DEFAULT_WINDOW_HEIGHT,
             bgm_volume: 1.0,
             sfx_volume: 1.0,
         }
     }
 }
 
-pub struct ConfigPlugin;
-
-impl Plugin for ConfigPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_startup_system(load_config);
-    }
-}
-
 /// Load the [`Config`] or generate a new one and insert it as a resource.
-fn load_config(mut commands: Commands) {
+pub fn load_config() -> Config {
     let dirs = ProjectDirs::from("com", "Spicy Lobster", "Bomby");
     let mut config = dirs
         .map(|dirs| {
@@ -72,6 +71,5 @@ fn load_config(mut commands: Commands) {
     config.bgm_volume = config.bgm_volume.clamp(0.0, 1.0);
     config.sfx_volume = config.sfx_volume.clamp(0.0, 1.0);
 
-    info!("{config:?}");
-    commands.insert_resource(config);
+    config
 }
