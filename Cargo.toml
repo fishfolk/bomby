@@ -23,10 +23,13 @@ toml = "0.5"
 [dependencies.bevy]
 version = "0.9"
 default_features = false
-features = [ "png", "x11" ]
+features = ["png"]
 
 [features]
+default = ["x11"]
 dev = ["bevy/dynamic"]
- 
+x11 = ["bevy/x11"]
+wayland = ["bevy/wayland"]
+
 [profile.dev.package."*"]
 opt-level = 3

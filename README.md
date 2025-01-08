@@ -13,6 +13,22 @@ This game is part of the [Fish Folk](https://spicylobster.itch.io/jumpy/devlog/4
 - [Folly](https://github.com/fishfolks/folly)
 - [Ballsy](https://github.com/fishfolks/ballsy)
 
+## Getting Started
+
+The easiest way to build and run *Bomby* is by using Cargo. The easiest way to set cargo up is by using [rustup](https://rustup.rs/).
+
+Then, you can run the game with
+
+```console
+$ cargo run --release
+```
+
+If you are using wayland, you can use
+
+```console
+$ cargo run --release --no-default-features --features wayland
+```
+
 ## Contributing
 
 Anyone involved in the Fish Folk community must follow our [code of conduct](https://github.com/fishfolks/jumpy/blob/main/CODE_OF_CONDUCT.md).
