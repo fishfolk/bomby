@@ -8,15 +8,12 @@ use rand::{rngs::SmallRng, SeedableRng};
 mod audio;
 mod bomb;
 mod camera;
+mod config;
 mod debug;
 mod ldtk;
 mod player;
 mod ui;
 mod z_sort;
-
-const RESOLUTION: f32 = 16.0 / 9.0;
-const WINDOW_HEIGHT: f32 = 900.0;
-const WINDOW_WIDTH: f32 = WINDOW_HEIGHT * RESOLUTION;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -29,6 +26,9 @@ pub enum GameState {
 pub struct GameRng(SmallRng);
 
 fn main() {
+    let config = config::load_config();
+    info!("Initialised config: {config:?}");
+
     App::new()
         .add_loopless_state(GameState::MainMenu)
         .add_plugins(
@@ -36,15 +36,16 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     window: WindowDescriptor {
-                        width: WINDOW_WIDTH,
-                        height: WINDOW_HEIGHT,
+                        width: config.window_width,
+                        height: config.window_height,
                         title: "Bomby!".to_string(),
-                        resizable: false,
+                        resizable: config.window_resizable,
                         ..default()
                     },
                     ..default()
                 }),
         )
+        .insert_resource(config)
         .add_plugin(bevy_kira_audio::AudioPlugin)
         .add_plugin(audio::AudioPlugin)
         .add_plugin(debug::DebugPlugin)
