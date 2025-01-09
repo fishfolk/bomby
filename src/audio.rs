@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
-use iyes_loopless::prelude::*;
 use rand::prelude::*;
 
 use crate::{config::Config, GameRng, GameState};
@@ -12,18 +11,12 @@ impl Plugin for AudioPlugin {
         app.add_event::<PlaySfx>()
             .add_audio_channel::<BgmChannel>()
             .add_audio_channel::<SfxChannel>()
-            .add_startup_system(load_audio)
-            .add_startup_system(set_volume)
-            .add_enter_system(GameState::MainMenu, start_title_bgm)
-            .add_enter_system(GameState::InGame, start_fight_bgm)
-            .add_exit_system(GameState::MainMenu, stop_bgm)
-            .add_exit_system(GameState::InGame, stop_bgm)
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::InGame)
-                    .with_system(play_sfx)
-                    .into(),
-            );
+            .add_systems(Startup, (load_audio, set_volume))
+            .add_systems(OnEnter(GameState::MainMenu), start_title_bgm)
+            .add_systems(OnEnter(GameState::InGame), start_fight_bgm)
+            .add_systems(OnExit(GameState::MainMenu), stop_bgm)
+            .add_systems(OnExit(GameState::InGame), stop_bgm)
+            .add_systems(Update, play_sfx.run_if(in_state(GameState::InGame)));
     }
 }
 
@@ -36,7 +29,7 @@ struct BgmChannel;
 struct SfxChannel;
 
 /// Event for SFX.
-#[derive(Debug)]
+#[derive(Event, Debug)]
 pub enum PlaySfx {
     PlayerDeath,
     BombExplosion,
@@ -81,7 +74,7 @@ fn play_sfx(
     mut ev_sfx: EventReader<PlaySfx>,
 ) {
     use PlaySfx::*;
-    for ev in ev_sfx.iter() {
+    for ev in ev_sfx.read() {
         macro_rules! random_track {
             ($handles:expr) => {
                 if let Some(audio_handle) = $handles.choose(&mut rng.0) {

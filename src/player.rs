@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
-use iyes_loopless::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use std::cmp::Ordering;
@@ -21,16 +20,17 @@ const SPEED: f32 = 125.0;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system_to_stage(StartupStage::PreStartup, load_graphics)
+        app.add_systems(PreStartup, load_graphics)
             .insert_resource(CountPlayers(4))
-            .add_plugin(InputManagerPlugin::<PlayerAction>::default())
-            .add_enter_system(GameState::InGame, spawn_players)
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::InGame)
-                    .with_system(movement_input.pipe(player_collisions).pipe(update_position))
-                    .with_system(animate_player)
-                    .into(),
+            .add_plugins(InputManagerPlugin::<PlayerAction>::default())
+            .add_systems(OnEnter(GameState::InGame), spawn_players)
+            .add_systems(
+                Update,
+                (
+                    (movement_input, player_collisions, update_position).chain(),
+                    animate_player,
+                )
+                    .run_if(in_state(GameState::InGame)),
             );
     }
 }
@@ -79,21 +79,18 @@ fn spawn_players(
 
         commands.spawn((
             Player,
-            SpriteSheetBundle {
-                transform: Transform::from_translation(translation.extend(PLAYER_Z)),
-                texture_atlas: textures
+            Sprite {
+                image: textures
                     .0
                     .get(i)
                     .unwrap_or_else(|| panic!("no sprite sheet for player: {player_name}"))
                     .clone(),
-                sprite: TextureAtlasSprite {
-                    index: 0,
-                    flip_x: i % 2 != 0,
-                    anchor: Anchor::BottomCenter,
-                    ..default()
-                },
+                texture_atlas: Some(textures.1.clone().into()),
+                flip_x: i % 2 != 0,
+                anchor: Anchor::BottomCenter,
                 ..default()
             },
+            Transform::from_translation(translation.extend(PLAYER_Z)),
             Velocity::default(),
             PlayerAnimator::default(),
             CollisionBounds {
@@ -105,38 +102,34 @@ fn spawn_players(
             // same players each time.
             InputManagerBundle::<PlayerAction> {
                 input_map: match i {
-                    0 => InputMap::new([(
-                        VirtualDPad {
-                            up: KeyCode::W.into(),
-                            down: KeyCode::S.into(),
-                            left: KeyCode::A.into(),
-                            right: KeyCode::D.into(),
-                        },
+                    0 => InputMap::new([(PlayerAction::Bomb, KeyCode::Space)]).with_dual_axis(
                         PlayerAction::Move,
-                    )])
-                    .insert(KeyCode::Space, PlayerAction::Bomb)
-                    .build(),
-                    1 => InputMap::new([(
-                        VirtualDPad {
-                            up: KeyCode::Up.into(),
-                            down: KeyCode::Down.into(),
-                            left: KeyCode::Left.into(),
-                            right: KeyCode::Right.into(),
-                        },
+                        VirtualDPad::new(
+                            KeyCode::KeyW,
+                            KeyCode::KeyS,
+                            KeyCode::KeyA,
+                            KeyCode::KeyD,
+                        ),
+                    ),
+                    1 => InputMap::new([(PlayerAction::Bomb, KeyCode::ShiftRight)]).with_dual_axis(
                         PlayerAction::Move,
-                    )])
-                    .insert(KeyCode::RShift, PlayerAction::Bomb)
-                    .build(),
-                    2 => InputMap::new([(DualAxis::left_stick(), PlayerAction::Move)])
-                        .insert(VirtualDPad::dpad(), PlayerAction::Move)
-                        .insert(GamepadButtonType::East, PlayerAction::Bomb)
-                        .set_gamepad(Gamepad { id: 0 })
-                        .build(),
-                    3 => InputMap::new([(DualAxis::left_stick(), PlayerAction::Move)])
-                        .insert(VirtualDPad::dpad(), PlayerAction::Move)
-                        .insert(GamepadButtonType::East, PlayerAction::Bomb)
-                        .set_gamepad(Gamepad { id: 1 })
-                        .build(),
+                        VirtualDPad::new(
+                            KeyCode::ArrowUp,
+                            KeyCode::ArrowDown,
+                            KeyCode::ArrowLeft,
+                            KeyCode::ArrowRight,
+                        ),
+                    ),
+                    // TODO: Since bevy 0.15 introduced "gamepads-as-entities", we will have to add
+                    // some gamepad registering logic.
+                    //
+                    // See: https://github.com/Leafwing-Studios/leafwing-input-manager/blob/main/examples/register_gamepads.rs
+                    2 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
+                        .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
+                    //.set_gamepad(Gamepad { id: 0 })
+                    3 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
+                        .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
+                    //.set_gamepad(Gamepad { id: 1 })
                     _ => panic!("no input map for player: {player_name}"),
                 },
                 ..default()
@@ -148,7 +141,7 @@ fn spawn_players(
 }
 
 fn animate_player(
-    mut players: Query<(&mut TextureAtlasSprite, &mut PlayerAnimator, &Velocity), With<Player>>,
+    mut players: Query<(&mut Sprite, &mut PlayerAnimator, &Velocity), With<Player>>,
     time: Res<Time>,
 ) {
     const MILLIS_BETWEEN_FRAMES: u128 = 100;
@@ -157,7 +150,7 @@ fn animate_player(
     const RUN_FRAMES: usize = 6;
 
     for (mut sprite, mut animator, velocity) in players.iter_mut() {
-        sprite.index = if velocity.0.length_squared() == 0.0 {
+        sprite.texture_atlas.as_mut().unwrap().index = if velocity.0.length_squared() == 0.0 {
             (time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) as usize % IDLE_FRAMES
         } else {
             (time.elapsed().as_millis() / MILLIS_BETWEEN_FRAMES) as usize % RUN_FRAMES + IDLE_FRAMES
@@ -172,8 +165,9 @@ fn animate_player(
 }
 
 // NOTE: If you are adding an Action, remember to update the `InputMap`s!
-#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum PlayerAction {
+    #[actionlike(DualAxis)]
     Move,
     Bomb,
 }
@@ -184,11 +178,11 @@ fn movement_input(
     time: Res<Time>,
 ) {
     for (action_state, mut velocity) in players.iter_mut() {
-        let axis_data = match action_state.axis_pair(PlayerAction::Move) {
-            Some(axis_data) => axis_data.xy(),
-            None => Vec2::ZERO,
-        };
-        velocity.0 = axis_data.normalize_or_zero() * SPEED * time.delta_seconds();
+        velocity.0 = action_state
+            .axis_pair(&PlayerAction::Move)
+            .normalize_or_zero()
+            * SPEED
+            * time.delta_secs();
     }
 }
 
@@ -273,32 +267,29 @@ fn update_position(mut q: Query<(&mut Transform, &Velocity)>) {
 }
 
 #[derive(Resource)]
-struct PlayerSheets(Vec<Handle<TextureAtlas>>);
+struct PlayerSheets(Vec<Handle<Image>>, Handle<TextureAtlasLayout>);
 
 fn load_graphics(
     mut commands: Commands,
     assets: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    macro_rules! load {
-        ($path:literal) => {{
-            let image = assets.load($path);
-            let atlas = TextureAtlas::from_grid(
-                image,
-                Vec2::splat(64.0),
-                14,
-                7,
-                Some(Vec2::new(32.0, 16.0)),
-                Some(Vec2::new(16.0, 0.0)),
-            );
-            texture_atlases.add(atlas)
-        }};
-    }
+    let layout = TextureAtlasLayout::from_grid(
+        UVec2::splat(64),
+        14,
+        7,
+        Some(UVec2::new(32, 16)),
+        Some(UVec2::new(16, 0)),
+    );
+    let layout = texture_atlas_layouts.add(layout);
 
-    commands.insert_resource(PlayerSheets(vec![
-        load!("player/PlayerFishy(64x64).png"),
-        load!("player/PlayerPescy(64x64).png"),
-        load!("player/PlayerSharky(64x64).png"),
-        load!("player/PlayerOrcy(64x64).png"),
-    ]));
+    commands.insert_resource(PlayerSheets(
+        vec![
+            assets.load("player/PlayerFishy(64x64).png"),
+            assets.load("player/PlayerPescy(64x64).png"),
+            assets.load("player/PlayerSharky(64x64).png"),
+            assets.load("player/PlayerOrcy(64x64).png"),
+        ],
+        layout,
+    ));
 }

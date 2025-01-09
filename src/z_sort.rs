@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use iyes_loopless::prelude::*;
 
 use std::cmp::Ordering;
 
@@ -13,7 +12,7 @@ pub struct ZSortPlugin;
 // else in the future, however it was unclear where to put it at time of writing.
 impl Plugin for ZSortPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(z_sort.run_in_state(GameState::InGame));
+        app.add_systems(Update, z_sort.run_if(in_state(GameState::InGame)));
     }
 }
 
