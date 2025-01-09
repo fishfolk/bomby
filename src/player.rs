@@ -22,7 +22,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, load_graphics)
             .insert_resource(CountPlayers(4))
-            //.add_plugins(InputManagerPlugin::<PlayerAction>::default())
+            .add_plugins(InputManagerPlugin::<PlayerAction>::default())
             .add_systems(OnEnter(GameState::InGame), spawn_players)
             .add_systems(
                 Update,
@@ -167,6 +167,7 @@ fn animate_player(
 // NOTE: If you are adding an Action, remember to update the `InputMap`s!
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum PlayerAction {
+    #[actionlike(DualAxis)]
     Move,
     Bomb,
 }

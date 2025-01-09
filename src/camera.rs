@@ -14,12 +14,7 @@ impl Plugin for CameraPlugin {
             .add_event::<CameraTrauma>()
             .add_systems(
                 Update,
-                (
-                    apply_shake,
-                    decay_trauma,
-                    apply_trauma,
-                    //center_camera
-                )
+                (apply_shake, decay_trauma, apply_trauma, center_camera)
                     .run_if(in_state(GameState::InGame)),
             );
     }
@@ -131,31 +126,27 @@ fn apply_shake(
 /// will panic.
 fn center_camera(
     mut camera_query: Single<&mut CameraShake, With<Camera>>,
-    //ldtk_query: Query<&Handle<LdtkProject>>,
+    ldtk_query: Query<&LdtkProjectHandle>,
     ldtk_assets: Res<Assets<LdtkProject>>,
-    level: Res<LevelSelection>,
+    // TODO: We may need to access this resource again in future if we have multiple levels.
+    // level: Res<LevelSelection>,
 ) {
-    //  // Get coordinates to center the camera on the level
-    //  let ldtk_asset_handle = ldtk_query.single();
-    //  let ldtk_level = ldtk_assets
-    //      .get(ldtk_asset_handle)
-    //      .unwrap()
-    //      .get_level(&level)
-    //      .unwrap();
-    //  let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
+    // Get coordinates to center the camera on the level
+    let ldtk_asset_handle = ldtk_query.single();
+    let ldtk_level = ldtk_assets.get(ldtk_asset_handle).unwrap().root_levels()[0].clone();
+    let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
 
-    //  let mut camera_transform = camera_query.single_mut();
-    //  camera_transform.center = (level_dimensions / 2.0).extend(999.9);
+    camera_query.center = (level_dimensions / 2.0).extend(999.9);
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Camera2d, CameraShake::new(90.0, Vec2::splat(100.0))));
-    //  Camera2dBundle {
-    //      projection: OrthographicProjection {
-    //          scale: 0.5,
-    //          ..default()
-    //      },
-    //      ..default()
-    //  },
+    commands.spawn((
+        Camera2d,
+        OrthographicProjection {
+            scale: 0.5,
+            ..OrthographicProjection::default_2d()
+        },
+        CameraShake::new(90.0, Vec2::splat(100.0)),
+    ));
     commands.insert_resource(ShakeNoise(Perlin::default()));
 }

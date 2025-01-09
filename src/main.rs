@@ -35,10 +35,9 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: (config.window_width.clone(), config.window_height.clone())
-                            .into(),
+                        resolution: (config.window_width, config.window_height).into(),
                         title: "Bomby!".to_string(),
-                        resizable: config.window_resizable.clone(),
+                        resizable: config.window_resizable,
                         ..default()
                     }),
                     ..default()
