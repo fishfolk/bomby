@@ -11,13 +11,13 @@ mod config;
 mod debug;
 mod ldtk;
 mod player;
-//mod ui;
+mod ui;
 mod z_sort;
 
 #[derive(States, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameState {
-    MainMenu,
     #[default]
+    MainMenu,
     LoadingLevel,
     InGame,
 }
@@ -53,7 +53,7 @@ fn main() {
             ldtk::BombyLdtkPlugin,
             bomb::BombPlugin,
             camera::CameraPlugin,
-            // ui::UiPlugin
+            ui::UiPlugin,
             z_sort::ZSortPlugin,
         ))
         .insert_resource(GameRng(SmallRng::from_entropy()))

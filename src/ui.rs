@@ -8,8 +8,7 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app//.add_plugin(NinePatchPlugin::<()>::default())
-            .add_systems(PreStartup, (load_font, load_graphics))
+        app.add_systems(PreStartup, (load_font, load_graphics))
             .add_systems(OnEnter(GameState::MainMenu), setup)
             .add_systems(
                 Update,
@@ -26,18 +25,20 @@ enum MainMenuButton {
 }
 
 fn detect_button_presses(
-    mut commands: Commands,
     buttons: Query<(&MainMenuButton, &Interaction)>,
+    mut next_state: ResMut<NextState<GameState>>,
     mut exit: EventWriter<AppExit>,
 ) {
     for button in buttons
         .iter()
-        .filter(|(_, state)| **state == Interaction::Clicked)
+        .filter(|(_, state)| **state == Interaction::Pressed)
         .map(|b| b.0)
     {
         match button {
-            MainMenuButton::Start => commands.insert_resource(NextState(GameState::LoadingLevel)),
-            MainMenuButton::Exit => exit.send(AppExit),
+            MainMenuButton::Start => next_state.set(GameState::LoadingLevel),
+            MainMenuButton::Exit => {
+                exit.send(AppExit::Success);
+            }
         }
     }
 }
@@ -66,15 +67,13 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                    padding: UiRect::top(Val::Percent(25.0)),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::FlexStart,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                padding: UiRect::top(Val::Percent(25.0)),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::FlexStart,
+                align_items: AlignItems::Center,
                 ..default()
             },
             DespawnOnExit,
@@ -89,57 +88,61 @@ fn spawn_green_button_with_text(
     ninepatch: &Res<ButtonNinePatch>,
     text: &str,
 ) -> Entity {
-    let button_content = commands
-        .spawn(TextBundle::from_section(
-            text,
-            TextStyle {
+    let mut cmd = commands.spawn((
+        Node {
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            margin: UiRect::top(Val::Px(10.0)),
+            ..default()
+        },
+        Sprite {
+            image: ninepatch.texture.clone(),
+            image_mode: SpriteImageMode::Sliced(ninepatch.ninepatch.clone()),
+            ..default()
+        },
+        Interaction::None,
+    ));
+
+    cmd.with_children(|builder| {
+        builder.spawn((
+            Text2d::new(text),
+            TextFont {
                 font: font.0.clone(),
                 font_size: 40.0,
-                color: Color::WHITE,
-            },
-        ))
-        .id();
-
-    commands
-        .spawn((
-            NinePatchBundle {
-                style: Style {
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    margin: UiRect::top(Val::Px(10.0)),
-                    ..default()
-                },
-                nine_patch_data: NinePatchData::with_single_content(
-                    ninepatch.texture.clone(),
-                    ninepatch.ninepatch.clone(),
-                    button_content,
-                ),
                 ..default()
             },
-            Interaction::None,
-        ))
-        .id()
+            TextColor(Color::WHITE),
+            TextLayout::new_with_justify(JustifyText::Center),
+            bevy::sprite::Anchor::Center,
+        ));
+    });
+
+    cmd.id()
 }
 
 #[derive(Resource)]
 struct ButtonNinePatch {
     texture: Handle<Image>,
-    ninepatch: Handle<NinePatchBuilder<()>>,
+    ninepatch: TextureSlicer,
 }
 
-fn load_graphics(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut nine_patches: ResMut<Assets<NinePatchBuilder<()>>>,
-) {
+fn load_graphics(mut commands: Commands, asset_server: Res<AssetServer>) {
     // NOTE: I am manually scaling the 9-patch assets to 200%. It may end up being beneficial to do
     // it programatically, for example dynamic window sizing.
     let button_ninepatch_texture = asset_server.load("ui/green-button.png");
-    let button_ninepatch_handle = nine_patches.add(NinePatchBuilder::by_margins(6, 10, 6, 6));
+    let button_ninepatch_slicer = TextureSlicer {
+        border: BorderRect {
+            top: 6.0,
+            bottom: 10.0,
+            left: 6.0,
+            right: 6.0,
+        },
+        ..default()
+    };
 
     commands.insert_resource(ButtonNinePatch {
         texture: button_ninepatch_texture,
-        ninepatch: button_ninepatch_handle,
+        ninepatch: button_ninepatch_slicer,
     });
 }
 
