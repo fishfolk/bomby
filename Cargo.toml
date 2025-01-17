@@ -12,7 +12,7 @@ leafwing-input-manager = "0.16"
 directories = "4.0"
 itertools = "0.10"
 noise = { git = "https://github.com/bsurmanski/noise-rs", rev = "5abdde1b819eccc47e74969c15e1b56ae5a055d6" }
-rand = { version = "0.8", default_features = false, features = ["std", "small_rng"] }
+rand = { version = "0.8", default-features = false, features = ["std", "small_rng"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_ignored = "0.1.6"
@@ -20,7 +20,7 @@ toml = "0.5"
 
 [dependencies.bevy]
 version = "0.15"
-default_features = false
+default-features = false
 features = ["bevy_asset", "bevy_state", "bevy_window", "multi_threaded", "png"]
 
 [features]
