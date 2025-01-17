@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use bevy::app::AppExit;
+use bevy::{app::AppExit, ui::widget::NodeImageMode};
 
 use crate::GameState;
 
@@ -57,12 +57,14 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
     let start_button = commands
         .entity(start_button)
         .insert(MainMenuButton::Start)
+        .insert(Name::new("Start button"))
         .id();
 
     let exit_button = spawn_green_button_with_text(&mut commands, &font, &button, "Exit");
     let exit_button = commands
         .entity(exit_button)
         .insert(MainMenuButton::Exit)
+        .insert(Name::new("Exit button"))
         .id();
 
     commands
@@ -93,19 +95,17 @@ fn spawn_green_button_with_text(
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             margin: UiRect::top(Val::Px(10.0)),
+            padding: UiRect::all(Val::Px(5.0)), // TODO: Improve this padding value.
             ..default()
         },
-        Sprite {
-            image: ninepatch.texture.clone(),
-            image_mode: SpriteImageMode::Sliced(ninepatch.ninepatch.clone()),
-            ..default()
-        },
+        ImageNode::new(ninepatch.texture.clone())
+            .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
         Interaction::None,
     ));
 
     cmd.with_children(|builder| {
         builder.spawn((
-            Text2d::new(text),
+            Text::new(text),
             TextFont {
                 font: font.0.clone(),
                 font_size: 40.0,

@@ -11,11 +11,15 @@ pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_camera)
+            .add_systems(OnEnter(GameState::MainMenu), set_projection_scale_menu)
+            .add_systems(
+                OnEnter(GameState::InGame),
+                (center_camera, set_projection_scale_in_game),
+            )
             .add_event::<CameraTrauma>()
             .add_systems(
                 Update,
-                (apply_shake, decay_trauma, apply_trauma, center_camera)
-                    .run_if(in_state(GameState::InGame)),
+                (apply_shake, decay_trauma, apply_trauma).run_if(in_state(GameState::InGame)),
             );
     }
 }
@@ -140,13 +144,20 @@ fn center_camera(
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        OrthographicProjection {
-            scale: 0.5,
-            ..OrthographicProjection::default_2d()
-        },
-        CameraShake::new(90.0, Vec2::splat(100.0)),
-    ));
+    commands.spawn((Camera2d, CameraShake::new(90.0, Vec2::splat(100.0))));
     commands.insert_resource(ShakeNoise(Perlin::default()));
+}
+
+/// There is a bug in bevy where with the lower projection scale (which we would like to use
+/// in-game) the [`Text`] nodes for the menu buttons don't render.
+// TODO: open a bug report for this.
+fn set_projection_scale_menu(mut camera: Single<&mut OrthographicProjection>) {
+    camera.scale = 3.0;
+}
+
+/// There is a bug in bevy where with the lower projection scale (which we would like to use
+/// in-game) the [`Text`] nodes for the menu buttons don't render.
+// TODO: open a bug report for this.
+fn set_projection_scale_in_game(mut camera: Single<&mut OrthographicProjection>) {
+    camera.scale = 0.5;
 }

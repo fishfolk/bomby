@@ -11,7 +11,7 @@ impl Plugin for AudioPlugin {
         app.add_event::<PlaySfx>()
             .add_audio_channel::<BgmChannel>()
             .add_audio_channel::<SfxChannel>()
-            .add_systems(Startup, (load_audio, set_volume))
+            .add_systems(PreStartup, (load_audio, set_volume))
             .add_systems(OnEnter(GameState::MainMenu), start_title_bgm)
             .add_systems(OnEnter(GameState::InGame), start_fight_bgm)
             .add_systems(OnExit(GameState::MainMenu), stop_bgm)

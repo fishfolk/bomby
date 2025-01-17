@@ -16,10 +16,20 @@ mod z_sort;
 
 #[derive(States, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameState {
+    /// For some reason, the first `StateTransition` schedule seems to happen before `PreStartup`.
+    /// So, in order to initialise resources to be used in `MainMenu`, we have to initialise the
+    /// state with the dummy variant `PreLoad`, which is immediately transitioned to `MainMenu` in
+    /// the first `Startup` schedule. This seems to me like a scheduling bug in bevy, but I haven't
+    /// opened an issue yet.
     #[default]
+    PreLoad,
     MainMenu,
     LoadingLevel,
     InGame,
+}
+
+fn go_to_menu(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::MainMenu);
 }
 
 #[derive(Resource)]
@@ -57,5 +67,6 @@ fn main() {
             z_sort::ZSortPlugin,
         ))
         .insert_resource(GameRng(SmallRng::from_entropy()))
+        .add_systems(Startup, go_to_menu)
         .run();
 }
