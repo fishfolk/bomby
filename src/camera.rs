@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
-use iyes_loopless::prelude::*;
 
-use bevy_inspector_egui::Inspectable;
+use bevy_inspector_egui::prelude::*;
 use noise::{NoiseFn, Perlin};
 
 use crate::GameState;
@@ -11,16 +10,16 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_camera)
-            .add_enter_system(GameState::InGame, center_camera)
+        app.add_systems(Startup, spawn_camera)
+            .add_systems(OnEnter(GameState::MainMenu), set_projection_scale_menu)
+            .add_systems(
+                OnEnter(GameState::InGame),
+                (center_camera, set_projection_scale_in_game),
+            )
             .add_event::<CameraTrauma>()
-            .add_system_set(
-                ConditionSet::new()
-                    .run_in_state(GameState::InGame)
-                    .with_system(apply_shake)
-                    .with_system(decay_trauma)
-                    .with_system(apply_trauma)
-                    .into(),
+            .add_systems(
+                Update,
+                (apply_shake, decay_trauma, apply_trauma).run_if(in_state(GameState::InGame)),
             );
     }
 }
@@ -28,11 +27,11 @@ impl Plugin for CameraPlugin {
 /// Component for an entity with camera shake.
 /// NOTE: To update the translation of such an entity, update the `center` field of this component
 /// instead. Do not update the Transform component directly.
-#[derive(Component, Inspectable, Reflect, Default)]
+#[derive(Component, Default, InspectorOptions)]
 pub struct CameraShake {
     /// Value from 0-1 that indicates the intensity of the shake. Should be set with
     /// `CameraShake::add_trauma` and not manually decayed.
-    #[inspectable(min = 0.0, max = 1.0)]
+    #[inspector(min = 0.0, max = 1.0)]
     trauma: f32,
     max_angle_rad: f32,
     max_offset: Vec2,
@@ -66,13 +65,14 @@ impl CameraShake {
 }
 
 /// Event to add trauma to the camera. Provide a value between 0 and 1 for the trauma amount.
+#[derive(Event)]
 pub struct CameraTrauma(pub f32);
 
 /// Apply the trauma sent by the [`CameraTrauma`] event to all the [`CameraShake`] components.
 fn apply_trauma(mut cameras: Query<&mut CameraShake>, mut ev_trauma: EventReader<CameraTrauma>) {
     cameras
         .iter_mut()
-        .for_each(|mut c| c.add_trauma(ev_trauma.iter().fold(0.0, |acc, trauma| acc + trauma.0)));
+        .for_each(|mut c| c.add_trauma(ev_trauma.read().fold(0.0, |acc, trauma| acc + trauma.0)));
 }
 
 /// Decay the trauma linearly over time.
@@ -82,7 +82,7 @@ fn decay_trauma(mut q: Query<&mut CameraShake>, time: Res<Time>) {
     const DECAY_RATE: f32 = 0.5;
 
     for mut shake in q.iter_mut() {
-        shake.trauma = 0.0f32.max(shake.trauma - DECAY_RATE * time.delta_seconds());
+        shake.trauma = 0.0f32.max(shake.trauma - DECAY_RATE * time.delta_secs());
     }
 }
 
@@ -101,7 +101,7 @@ fn apply_shake(
         ($offset:expr) => {
             noise
                 .0
-                .get([((time.elapsed_seconds() + $offset) * SHAKE_SPEED).into()]) as f32
+                .get([((time.elapsed_secs() + $offset) * SHAKE_SPEED).into()]) as f32
         };
     }
 
@@ -126,37 +126,38 @@ fn apply_shake(
     }
 }
 
-/// Centers the camera on the LDtk world. Must have a single entity with `LdtkAsset` or this system
+/// Centers the camera on the LDtk world. Must have a single entity with `LdtkProject` or this system
 /// will panic.
 fn center_camera(
-    mut camera_query: Query<&mut CameraShake, With<Camera>>,
-    ldtk_query: Query<&Handle<LdtkAsset>>,
-    ldtk_assets: Res<Assets<LdtkAsset>>,
-    level: Res<LevelSelection>,
+    mut camera_query: Single<&mut CameraShake, With<Camera>>,
+    ldtk_query: Query<&LdtkProjectHandle>,
+    ldtk_assets: Res<Assets<LdtkProject>>,
+    // TODO: We may need to access this resource again in future if we have multiple levels.
+    // level: Res<LevelSelection>,
 ) {
     // Get coordinates to center the camera on the level
     let ldtk_asset_handle = ldtk_query.single();
-    let ldtk_level = ldtk_assets
-        .get(ldtk_asset_handle)
-        .unwrap()
-        .get_level(&level)
-        .unwrap();
+    let ldtk_level = ldtk_assets.get(ldtk_asset_handle).unwrap().root_levels()[0].clone();
     let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
 
-    let mut camera_transform = camera_query.single_mut();
-    camera_transform.center = (level_dimensions / 2.0).extend(999.9);
+    camera_query.center = (level_dimensions / 2.0).extend(999.9);
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2dBundle {
-            projection: OrthographicProjection {
-                scale: 0.5,
-                ..default()
-            },
-            ..default()
-        },
-        CameraShake::new(90.0, Vec2::splat(100.0)),
-    ));
+    commands.spawn((Camera2d, CameraShake::new(90.0, Vec2::splat(100.0))));
     commands.insert_resource(ShakeNoise(Perlin::default()));
+}
+
+/// There is a bug in bevy where with the lower projection scale (which we would like to use
+/// in-game) the [`Text`] nodes for the menu buttons don't render.
+// TODO: open a bug report for this.
+fn set_projection_scale_menu(mut camera: Single<&mut OrthographicProjection>) {
+    camera.scale = 3.0;
+}
+
+/// There is a bug in bevy where with the lower projection scale (which we would like to use
+/// in-game) the [`Text`] nodes for the menu buttons don't render.
+// TODO: open a bug report for this.
+fn set_projection_scale_in_game(mut camera: Single<&mut OrthographicProjection>) {
+    camera.scale = 0.5;
 }

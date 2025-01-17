@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_ecs_ldtk::prelude::*;
-use iyes_loopless::prelude::*;
 
 use crate::GameState;
 
@@ -8,13 +7,12 @@ pub struct BombyLdtkPlugin;
 
 impl Plugin for BombyLdtkPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(LdtkPlugin)
-            .insert_resource(LevelSelection::Index(0))
-            .add_enter_system(GameState::LoadingLevel, setup)
-            .add_system(
-                finish_loading
-                    .run_if(level_spawned)
-                    .run_in_state(GameState::LoadingLevel),
+        app.add_plugins(LdtkPlugin)
+            .insert_resource(LevelSelection::index(0))
+            .add_systems(OnEnter(GameState::LoadingLevel), setup)
+            .add_systems(
+                Update,
+                finish_loading.run_if(in_state(GameState::LoadingLevel).and(level_spawned)),
             );
     }
 }
@@ -80,18 +78,18 @@ where
 /// This means we can rely on entities existing such as the player spawn points.
 pub fn level_spawned(mut level_events: EventReader<LevelEvent>) -> bool {
     level_events
-        .iter()
+        .read()
         .any(|e| matches!(e, LevelEvent::Spawned(_)))
 }
 
-fn finish_loading(mut commands: Commands) {
-    commands.insert_resource(NextState(GameState::InGame));
+fn finish_loading(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::InGame);
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         LdtkWorldBundle {
-            ldtk_handle: asset_server.load("level.ldtk"),
+            ldtk_handle: asset_server.load("level.ldtk").into(),
             ..default()
         },
         Name::new("LDtkWorld"),

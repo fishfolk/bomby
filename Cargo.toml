@@ -4,32 +4,30 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy_ecs_ldtk = "0.5"
-bevy-inspector-egui = "0.14"
-bevy_kira_audio = { version = "0.13", features = ["wav"] }
-bevy_ninepatch = "0.9"
-iyes_loopless = "0.9"
-leafwing-input-manager = "0.7"
+bevy_ecs_ldtk = "0.11"
+bevy-inspector-egui = "0.28"
+bevy_kira_audio = { version = "0.22", features = ["wav"] }
+leafwing-input-manager = "0.16"
 
 directories = "4.0"
 itertools = "0.10"
 noise = { git = "https://github.com/bsurmanski/noise-rs", rev = "5abdde1b819eccc47e74969c15e1b56ae5a055d6" }
-rand = { version = "0.8", default_features = false, features = ["std", "small_rng"] }
+rand = { version = "0.8", default-features = false, features = ["std", "small_rng"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_ignored = "0.1.6"
 toml = "0.5"
 
 [dependencies.bevy]
-version = "0.9"
-default_features = false
-features = ["png"]
+version = "0.15"
+default-features = false
+features = ["bevy_asset", "bevy_state", "bevy_window", "multi_threaded", "png"]
 
 [features]
 default = ["x11"]
-dev = ["bevy/dynamic"]
+dev = ["bevy/dynamic_linking"]
 x11 = ["bevy/x11"]
 wayland = ["bevy/wayland"]
 
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 0
