@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use bevy::{app::AppExit, ui::widget::NodeImageMode};
+use bevy::{
+    app::AppExit,
+    ui::widget::NodeImageMode,
+    ui_widgets::{Activate, Button},
+};
 
 use crate::GameState;
 
@@ -10,36 +14,7 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, (load_font, load_graphics))
             .add_systems(OnEnter(GameState::MainMenu), setup)
-            .add_systems(
-                Update,
-                detect_button_presses.run_if(in_state(GameState::MainMenu)),
-            )
             .add_systems(OnExit(GameState::MainMenu), despawn_ui);
-    }
-}
-
-#[derive(Component)]
-enum MainMenuButton {
-    Start,
-    Exit,
-}
-
-fn detect_button_presses(
-    buttons: Query<(&MainMenuButton, &Interaction)>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut exit: MessageWriter<AppExit>,
-) {
-    for button in buttons
-        .iter()
-        .filter(|(_, state)| **state == Interaction::Pressed)
-        .map(|b| b.0)
-    {
-        match button {
-            MainMenuButton::Start => next_state.set(GameState::LoadingLevel),
-            MainMenuButton::Exit => {
-                exit.write(AppExit::Success);
-            }
-        }
     }
 }
 
@@ -54,15 +29,23 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
     let start_button = spawn_green_button_with_text(&mut commands, &font, &button, "Start Game");
     let start_button = commands
         .entity(start_button)
-        .insert(MainMenuButton::Start)
+        .insert(Button)
         .insert(Name::new("Start button"))
+        .observe(
+            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+                next_state.set(GameState::LoadingLevel)
+            },
+        )
         .id();
 
     let exit_button = spawn_green_button_with_text(&mut commands, &font, &button, "Exit");
     let exit_button = commands
         .entity(exit_button)
-        .insert(MainMenuButton::Exit)
+        .insert(Button)
         .insert(Name::new("Exit button"))
+        .observe(|_: On<Activate>, mut m_exit: MessageWriter<AppExit>| {
+            m_exit.write(AppExit::Success);
+        })
         .id();
 
     commands
@@ -98,7 +81,6 @@ fn spawn_green_button_with_text(
             },
             ImageNode::new(ninepatch.texture.clone())
                 .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
-            Interaction::None,
         ))
         .with_children(|builder| {
             builder

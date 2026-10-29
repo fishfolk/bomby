@@ -21,7 +21,7 @@ toml = "0.5"
 [dependencies.bevy]
 version = "0.20"
 default-features = false
-features = ["2d", "ui"]
+features = ["2d", "ui", "bevy_ui_widgets"]
 
 [features]
 dev = ["bevy/dynamic_linking"]
