@@ -16,7 +16,7 @@ impl Plugin for CameraPlugin {
                 OnEnter(GameState::InGame),
                 (center_camera, set_projection_scale_in_game),
             )
-            .add_event::<CameraTrauma>()
+            .add_message::<CameraTrauma>()
             .add_systems(
                 Update,
                 (apply_shake, decay_trauma, apply_trauma).run_if(in_state(GameState::InGame)),
@@ -65,14 +65,14 @@ impl CameraShake {
 }
 
 /// Event to add trauma to the camera. Provide a value between 0 and 1 for the trauma amount.
-#[derive(Event)]
+#[derive(Message)]
 pub struct CameraTrauma(pub f32);
 
 /// Apply the trauma sent by the [`CameraTrauma`] event to all the [`CameraShake`] components.
-fn apply_trauma(mut cameras: Query<&mut CameraShake>, mut ev_trauma: EventReader<CameraTrauma>) {
+fn apply_trauma(mut cameras: Query<&mut CameraShake>, mut m_trauma: MessageReader<CameraTrauma>) {
     cameras
         .iter_mut()
-        .for_each(|mut c| c.add_trauma(ev_trauma.read().fold(0.0, |acc, trauma| acc + trauma.0)));
+        .for_each(|mut c| c.add_trauma(m_trauma.read().fold(0.0, |acc, trauma| acc + trauma.0)));
 }
 
 /// Decay the trauma linearly over time.
@@ -136,7 +136,7 @@ fn center_camera(
     // level: Res<LevelSelection>,
 ) {
     // Get coordinates to center the camera on the level
-    let ldtk_asset_handle = ldtk_query.single();
+    let ldtk_asset_handle = ldtk_query.single().unwrap();
     let ldtk_level = ldtk_assets.get(ldtk_asset_handle).unwrap().root_levels()[0].clone();
     let level_dimensions = Vec2::new(ldtk_level.px_wid as f32, ldtk_level.px_hei as f32);
 
@@ -151,13 +151,19 @@ fn spawn_camera(mut commands: Commands) {
 /// There is a bug in bevy where with the lower projection scale (which we would like to use
 /// in-game) the [`Text`] nodes for the menu buttons don't render.
 // TODO: open a bug report for this.
-fn set_projection_scale_menu(mut camera: Single<&mut OrthographicProjection>) {
-    camera.scale = 3.0;
+fn set_projection_scale_menu(mut camera: Single<&mut Projection>) {
+    let Projection::Orthographic(projection) = &mut **camera else {
+        panic!("expected orthographic camera");
+    };
+    projection.scale = 3.0;
 }
 
 /// There is a bug in bevy where with the lower projection scale (which we would like to use
 /// in-game) the [`Text`] nodes for the menu buttons don't render.
 // TODO: open a bug report for this.
-fn set_projection_scale_in_game(mut camera: Single<&mut OrthographicProjection>) {
-    camera.scale = 0.5;
+fn set_projection_scale_in_game(mut camera: Single<&mut Projection>) {
+    let Projection::Orthographic(projection) = &mut **camera else {
+        panic!("expected orthographic camera");
+    };
+    projection.scale = 0.5;
 }

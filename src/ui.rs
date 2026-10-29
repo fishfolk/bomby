@@ -27,7 +27,7 @@ enum MainMenuButton {
 fn detect_button_presses(
     buttons: Query<(&MainMenuButton, &Interaction)>,
     mut next_state: ResMut<NextState<GameState>>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     for button in buttons
         .iter()
@@ -37,7 +37,7 @@ fn detect_button_presses(
         match button {
             MainMenuButton::Start => next_state.set(GameState::LoadingLevel),
             MainMenuButton::Exit => {
-                exit.send(AppExit::Success);
+                exit.write(AppExit::Success);
             }
         }
     }
@@ -47,9 +47,7 @@ fn detect_button_presses(
 struct DespawnOnExit;
 
 fn despawn_ui(mut commands: Commands, to_despawn: Query<Entity, With<DespawnOnExit>>) {
-    to_despawn
-        .iter()
-        .for_each(|e| commands.entity(e).despawn_recursive());
+    to_despawn.iter().for_each(|e| commands.entity(e).despawn());
 }
 
 fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePatch>) {
@@ -107,13 +105,13 @@ fn spawn_green_button_with_text(
         builder.spawn((
             Text::new(text),
             TextFont {
-                font: font.0.clone(),
-                font_size: 40.0,
+                font: FontSource::Handle(font.0.clone()),
+                font_size: FontSize::Px(40.0),
                 ..default()
             },
             TextColor(Color::WHITE),
-            TextLayout::new_with_justify(JustifyText::Center),
-            bevy::sprite::Anchor::Center,
+            TextLayout::justify(Justify::Center),
+            bevy::sprite::Anchor::CENTER,
         ));
     });
 
@@ -132,10 +130,8 @@ fn load_graphics(mut commands: Commands, asset_server: Res<AssetServer>) {
     let button_ninepatch_texture = asset_server.load("ui/green-button.png");
     let button_ninepatch_slicer = TextureSlicer {
         border: BorderRect {
-            top: 6.0,
-            bottom: 10.0,
-            left: 6.0,
-            right: 6.0,
+            min_inset: (6.0, 6.0).into(),
+            max_inset: (6.0, 10.0).into(),
         },
         ..default()
     };

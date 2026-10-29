@@ -8,7 +8,7 @@ pub struct AudioPlugin;
 
 impl Plugin for AudioPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlaySfx>()
+        app.add_message::<PlaySfx>()
             .add_audio_channel::<BgmChannel>()
             .add_audio_channel::<SfxChannel>()
             .add_systems(PreStartup, (load_audio, set_volume))
@@ -29,7 +29,7 @@ struct BgmChannel;
 struct SfxChannel;
 
 /// Event for SFX.
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub enum PlaySfx {
     PlayerDeath,
     BombExplosion,
@@ -71,20 +71,20 @@ fn play_sfx(
     audio: Res<AudioChannel<SfxChannel>>,
     sfx: Res<Sfx>,
     mut rng: ResMut<GameRng>,
-    mut ev_sfx: EventReader<PlaySfx>,
+    mut m_sfx: MessageReader<PlaySfx>,
 ) {
     use PlaySfx::*;
-    for ev in ev_sfx.read() {
+    for m in m_sfx.read() {
         macro_rules! random_track {
             ($handles:expr) => {
                 if let Some(audio_handle) = $handles.choose(&mut rng.0) {
                     audio.play(audio_handle.clone());
                 } else {
-                    warn!("no handles to SFX for {:?}", ev);
+                    warn!("no handles to SFX for {:?}", m);
                 }
             };
         }
-        match ev {
+        match m {
             BombFuse => {
                 audio.play(sfx.bomb_fuse.clone()).with_volume(0.5);
             }

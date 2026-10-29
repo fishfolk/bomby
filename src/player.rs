@@ -77,6 +77,35 @@ fn spawn_players(
             .unwrap_or_else(|| panic!("no spawn point found for player: {player_name}"))
             + Vec2::Y * -8.0;
 
+        // For testing purposes, all of the keys/controllers are hardcoded and assigned to the
+        // same players each time.
+        let input_map = match i {
+            0 => InputMap::new([(PlayerAction::Bomb, KeyCode::Space)]).with_dual_axis(
+                PlayerAction::Move,
+                VirtualDPad::new(KeyCode::KeyW, KeyCode::KeyS, KeyCode::KeyA, KeyCode::KeyD),
+            ),
+            1 => InputMap::new([(PlayerAction::Bomb, KeyCode::ShiftRight)]).with_dual_axis(
+                PlayerAction::Move,
+                VirtualDPad::new(
+                    KeyCode::ArrowUp,
+                    KeyCode::ArrowDown,
+                    KeyCode::ArrowLeft,
+                    KeyCode::ArrowRight,
+                ),
+            ),
+            // TODO: Since bevy 0.15 introduced "gamepads-as-entities", we will have to add
+            // some gamepad registering logic.
+            //
+            // See: https://github.com/Leafwing-Studios/leafwing-input-manager/blob/main/examples/register_gamepads.rs
+            2 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
+                .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
+            //.set_gamepad(Gamepad { id: 0 })
+            3 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
+                .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
+            //.set_gamepad(Gamepad { id: 1 })
+            _ => panic!("no input map for player: {player_name}"),
+        };
+
         commands.spawn((
             Player,
             Sprite {
@@ -87,9 +116,9 @@ fn spawn_players(
                     .clone(),
                 texture_atlas: Some(textures.1.clone().into()),
                 flip_x: i % 2 != 0,
-                anchor: Anchor::BottomCenter,
                 ..default()
             },
+            Anchor::BOTTOM_CENTER,
             Transform::from_translation(translation.extend(PLAYER_Z)),
             Velocity::default(),
             PlayerAnimator::default(),
@@ -98,42 +127,7 @@ fn spawn_players(
                 y: (0.0, 8.0),
             },
             CountBombs::default(),
-            // For testing purposes, all of the keys/controllers are hardcoded and assigned to the
-            // same players each time.
-            InputManagerBundle::<PlayerAction> {
-                input_map: match i {
-                    0 => InputMap::new([(PlayerAction::Bomb, KeyCode::Space)]).with_dual_axis(
-                        PlayerAction::Move,
-                        VirtualDPad::new(
-                            KeyCode::KeyW,
-                            KeyCode::KeyS,
-                            KeyCode::KeyA,
-                            KeyCode::KeyD,
-                        ),
-                    ),
-                    1 => InputMap::new([(PlayerAction::Bomb, KeyCode::ShiftRight)]).with_dual_axis(
-                        PlayerAction::Move,
-                        VirtualDPad::new(
-                            KeyCode::ArrowUp,
-                            KeyCode::ArrowDown,
-                            KeyCode::ArrowLeft,
-                            KeyCode::ArrowRight,
-                        ),
-                    ),
-                    // TODO: Since bevy 0.15 introduced "gamepads-as-entities", we will have to add
-                    // some gamepad registering logic.
-                    //
-                    // See: https://github.com/Leafwing-Studios/leafwing-input-manager/blob/main/examples/register_gamepads.rs
-                    2 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
-                        .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
-                    //.set_gamepad(Gamepad { id: 0 })
-                    3 => InputMap::new([(PlayerAction::Bomb, GamepadButton::East)])
-                        .with_dual_axis(PlayerAction::Move, GamepadStick::LEFT),
-                    //.set_gamepad(Gamepad { id: 1 })
-                    _ => panic!("no input map for player: {player_name}"),
-                },
-                ..default()
-            },
+            input_map,
             ZSort(PLAYER_Z),
             Name::new(player_name),
         ));
@@ -196,7 +190,7 @@ pub struct CollisionBounds {
 /// Detect player collisions with walls and bombs to restrict movement
 fn player_collisions(
     mut players: Query<(&mut Velocity, &Transform, &CollisionBounds), With<Player>>,
-    tiles: Query<(&Parent, &GridCoords)>,
+    tiles: Query<(&ChildOf, &GridCoords)>,
     bombs: Query<&Transform, With<Bomb>>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
 ) {
@@ -208,9 +202,9 @@ fn player_collisions(
 
     let unwalkable = tiles
         .iter()
-        .filter(|(parent, coords)| {
+        .filter(|(child_of, coords)| {
             bomb_tiles.iter().any(|b| b == *coords)
-                || ldtk_layer_meta_q.get(***parent).map_or_else(
+                || ldtk_layer_meta_q.get(child_of.parent()).map_or_else(
                     |_| {
                         warn!("LDtk tile not child of a layer with coords: {coords:?}");
                         false

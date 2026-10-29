@@ -14,18 +14,18 @@ use serde_derive::{Deserialize, Serialize};
 use std::fs;
 
 const DEFAULT_ASPECT_RATIO: f32 = 16.0 / 9.0;
-const DEFAULT_WINDOW_HEIGHT: f32 = 900.0;
-const DEFAULT_WINDOW_WIDTH: f32 = DEFAULT_WINDOW_HEIGHT * DEFAULT_ASPECT_RATIO;
+const DEFAULT_WINDOW_HEIGHT: u32 = 900;
+const DEFAULT_WINDOW_WIDTH: u32 = ((DEFAULT_WINDOW_HEIGHT as f32) * DEFAULT_ASPECT_RATIO) as u32;
 
 /// Config resource containing runtime settings for the game.
 #[derive(Resource, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub window_resizable: bool,
-    pub window_width: f32,
-    pub window_height: f32,
-    pub bgm_volume: f64,
-    pub sfx_volume: f64,
+    pub window_width: u32,
+    pub window_height: u32,
+    pub bgm_volume: f32,
+    pub sfx_volume: f32,
 }
 
 impl Default for Config {

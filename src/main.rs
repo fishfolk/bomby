@@ -1,6 +1,6 @@
 #![warn(clippy::semicolon_if_nothing_returned, clippy::uninlined_format_args)]
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResolution};
 
 use rand::{rngs::SmallRng, SeedableRng};
 
@@ -45,7 +45,10 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        resolution: (config.window_width, config.window_height).into(),
+                        resolution: WindowResolution::new(
+                            config.window_width,
+                            config.window_height,
+                        ),
                         title: "Bomby!".to_string(),
                         resizable: config.window_resizable,
                         ..default()
