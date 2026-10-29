@@ -33,7 +33,7 @@ fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePa
         .insert(Name::new("Start button"))
         .observe(
             |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
-                next_state.set(GameState::LoadingLevel)
+                next_state.set(GameState::LoadingLevel);
             },
         )
         .id();
