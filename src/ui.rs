@@ -88,34 +88,39 @@ fn spawn_green_button_with_text(
     ninepatch: &Res<ButtonNinePatch>,
     text: &str,
 ) -> Entity {
-    let mut cmd = commands.spawn((
-        Node {
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            margin: UiRect::top(Val::Px(10.0)),
-            padding: UiRect::all(Val::Px(5.0)), // TODO: Improve this padding value.
-            ..default()
-        },
-        ImageNode::new(ninepatch.texture.clone())
-            .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
-        Interaction::None,
-    ));
-
-    cmd.with_children(|builder| {
-        builder.spawn((
-            Text::new(text),
-            TextFont {
-                font: FontSource::Handle(font.0.clone()),
-                font_size: FontSize::Px(40.0),
+    commands
+        .spawn((
+            Node {
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                margin: UiRect::top(Val::Px(10.0)),
                 ..default()
             },
-            TextColor(Color::WHITE),
-            TextLayout::justify(Justify::Center),
-            bevy::sprite::Anchor::CENTER,
-        ));
-    });
-
-    cmd.id()
+            ImageNode::new(ninepatch.texture.clone())
+                .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
+            Interaction::None,
+        ))
+        .with_children(|builder| {
+            builder
+                .spawn(Node {
+                    padding: UiRect::all(Val::Px(8.0)),
+                    ..default()
+                })
+                .with_children(|builder| {
+                    builder.spawn((
+                        Text::new(text),
+                        TextFont {
+                            font: FontSource::Handle(font.0.clone()),
+                            font_size: FontSize::Px(40.0),
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        TextLayout::justify(Justify::Center),
+                        bevy::sprite::Anchor::CENTER,
+                    ));
+                });
+        })
+        .id()
 }
 
 #[derive(Resource)]
