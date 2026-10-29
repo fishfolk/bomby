@@ -30,4 +30,4 @@ x11 = ["bevy/x11"]
 wayland = ["bevy/wayland"]
 
 [profile.dev.package."*"]
-opt-level = 0
+opt-level = 2
