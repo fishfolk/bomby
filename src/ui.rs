@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use bevy::text::FontSourceTemplate;
 use bevy::{
     app::AppExit,
     ui::widget::NodeImageMode,
@@ -18,7 +19,7 @@ impl Plugin for UiPlugin {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy, Default)]
 struct DespawnOnExit;
 
 fn despawn_ui(mut commands: Commands, to_despawn: Query<Entity, With<DespawnOnExit>>) {
@@ -26,83 +27,72 @@ fn despawn_ui(mut commands: Commands, to_despawn: Query<Entity, With<DespawnOnEx
 }
 
 fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePatch>) {
-    let start_button = spawn_green_button_with_text(&mut commands, &font, &button, "Start Game");
-    let start_button = commands
-        .entity(start_button)
-        .insert(Button)
-        .insert(Name::new("Start button"))
-        .observe(
-            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+    commands.spawn_scene(bsn! {
+        DespawnOnExit
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            padding: UiRect::top(Val::Percent(25.0)),
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::FlexStart,
+            align_items: AlignItems::Center,
+        }
+        Children [
+            @green_button_with_text(
+                font.0.clone(),
+                &button,
+                "Start Game".to_string(),
+            )
+            on(|_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
                 next_state.set(GameState::LoadingLevel);
-            },
-        )
-        .id();
-
-    let exit_button = spawn_green_button_with_text(&mut commands, &font, &button, "Exit");
-    let exit_button = commands
-        .entity(exit_button)
-        .insert(Button)
-        .insert(Name::new("Exit button"))
-        .observe(|_: On<Activate>, mut m_exit: MessageWriter<AppExit>| {
-            m_exit.write(AppExit::Success);
-        })
-        .id();
-
-    commands
-        .spawn((
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                padding: UiRect::top(Val::Percent(25.0)),
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::FlexStart,
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            DespawnOnExit,
-        ))
-        .add_child(start_button)
-        .add_child(exit_button);
+            })
+            --
+            @green_button_with_text(
+                font.0.clone(),
+                &button,
+                "Exit".to_string(),
+            )
+            on(|_: On<Activate>, mut m_exit: MessageWriter<AppExit>| {
+                m_exit.write(AppExit::Success);
+            })
+        ]
+    });
 }
 
-fn spawn_green_button_with_text(
-    commands: &mut Commands,
-    font: &Res<FontHandle>,
-    ninepatch: &Res<ButtonNinePatch>,
-    text: &str,
-) -> Entity {
-    commands
-        .spawn((
+fn green_button_with_text(
+    font: Handle<Font>,
+    ninepatch: &ButtonNinePatch,
+    text: String,
+) -> impl Scene {
+    let image = ninepatch.texture.clone();
+    let ninepatch = ninepatch.ninepatch.clone();
+    bsn! {
+        Node {
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            margin: UiRect::top(Val::Px(10.0)),
+        }
+        ImageNode {
+            image,
+            image_mode: NodeImageMode::Sliced(ninepatch)
+        }
+        Button
+        Children [
             Node {
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                margin: UiRect::top(Val::Px(10.0)),
-                ..default()
-            },
-            ImageNode::new(ninepatch.texture.clone())
-                .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
-        ))
-        .with_children(|builder| {
-            builder
-                .spawn(Node {
-                    padding: UiRect::all(Val::Px(8.0)),
-                    ..default()
-                })
-                .with_children(|builder| {
-                    builder.spawn((
-                        Text::new(text),
-                        TextFont {
-                            font: FontSource::Handle(font.0.clone()),
-                            font_size: FontSize::Px(40.0),
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                        TextLayout::justify(Justify::Center),
-                        bevy::sprite::Anchor::CENTER,
-                    ));
-                });
-        })
-        .id()
+                padding: UiRect::all(Val::Px(8.0)),
+            }
+            Children [
+                Text::new(text)
+                TextFont {
+                    font: FontSourceTemplate::Handle(font),
+                    font_size: FontSize::Px(40.0),
+                }
+                TextColor(Color::WHITE)
+                TextLayout::justify(Justify::Center)
+                bevy::sprite::Anchor::CENTER
+            ]
+        ]
+    }
 }
 
 #[derive(Resource)]
