@@ -12,7 +12,7 @@ impl Plugin for BombyLdtkPlugin {
             .add_systems(OnEnter(GameState::LoadingLevel), setup)
             .add_systems(
                 Update,
-                finish_loading.run_if(in_state(GameState::LoadingLevel).and(level_spawned)),
+                finish_loading.run_if(in_state(GameState::LoadingLevel).and_then(level_spawned)),
             );
     }
 }
@@ -76,8 +76,8 @@ where
 
 /// Detect if there is a `Spawned` event from [`bevy_ecs_ldtk`], indicating that the level has spawned.
 /// This means we can rely on entities existing such as the player spawn points.
-pub fn level_spawned(mut level_events: EventReader<LevelEvent>) -> bool {
-    level_events
+pub fn level_spawned(mut m_level_events: MessageReader<LevelEvent>) -> bool {
+    m_level_events
         .read()
         .any(|e| matches!(e, LevelEvent::Spawned(_)))
 }

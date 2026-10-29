@@ -52,7 +52,7 @@ fn spawn_bombs(
     >,
     texture_atlas: Res<BombSprite>,
     bombs: Query<&Transform, With<Bomb>>,
-    mut ev_sfx: EventWriter<PlaySfx>,
+    mut m_sfx: MessageWriter<PlaySfx>,
 ) {
     for (entity, translation, mut count_bombs) in players
         .iter_mut()
@@ -79,7 +79,7 @@ fn spawn_bombs(
 
         count_bombs.0 += 1;
 
-        ev_sfx.send(PlaySfx::BombFuse);
+        m_sfx.write(PlaySfx::BombFuse);
     }
 }
 
@@ -89,10 +89,10 @@ fn update_bombs(
     mut commands: Commands,
     mut bombs: Query<(Entity, &mut Bomb, &Transform)>,
     mut players: Query<(Entity, &mut CountBombs, &Transform), With<Player>>,
-    mut ev_trauma: EventWriter<CameraTrauma>,
-    mut ev_sfx: EventWriter<PlaySfx>,
+    mut m_trauma: MessageWriter<CameraTrauma>,
+    mut m_sfx: MessageWriter<PlaySfx>,
     time: Res<Time>,
-    tiles: Query<(Entity, &Parent, &GridCoords)>,
+    tiles: Query<(Entity, &ChildOf, &GridCoords)>,
     ldtk_layer_meta_q: Query<&LayerMetadata>,
 ) {
     for (entity, mut bomb, bomb_coords) in bombs
@@ -102,7 +102,7 @@ fn update_bombs(
         bomb.timer.tick(time.delta());
 
         if bomb.timer.just_finished() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
 
             // Decrement `CountBombs` component on the player that spawned the bomb
             if let Ok((_, mut bomb_count, _)) = players.get_mut(bomb.spawner) {
@@ -119,8 +119,8 @@ fn update_bombs(
                 .collect::<Vec<_>>();
 
             // Destroy bombable tiles within 1 orthogonal tile
-            for tile in affected_tiles.iter().filter(|(_, parent, coords)| {
-                ldtk_layer_meta_q.get(***parent).map_or_else(
+            for tile in affected_tiles.iter().filter(|(_, child_of, coords)| {
+                ldtk_layer_meta_q.get(child_of.parent()).map_or_else(
                     |_| {
                         warn!("LDtk tile not child of a layer with coords: {coords:?}");
                         false
@@ -128,7 +128,7 @@ fn update_bombs(
                     |ldtk_layer| ldtk_layer.identifier == "Bombable",
                 )
             }) {
-                commands.entity(tile.0).despawn_recursive();
+                commands.entity(tile.0).despawn();
             }
 
             // Blow up players. Destroying for now, in future probably add a marker component which
@@ -138,12 +138,12 @@ fn update_bombs(
                     .iter()
                     .any(|(_, _, coords)| player_transform.translation.to_grid() == **coords)
             }) {
-                ev_sfx.send(PlaySfx::PlayerDeath);
-                commands.entity(entity).despawn_recursive();
+                m_sfx.write(PlaySfx::PlayerDeath);
+                commands.entity(entity).despawn();
             }
 
-            ev_sfx.send(PlaySfx::BombExplosion);
-            ev_trauma.send(CameraTrauma(BOMB_TRAUMA));
+            m_sfx.write(PlaySfx::BombExplosion);
+            m_trauma.write(CameraTrauma(BOMB_TRAUMA));
         }
     }
 }

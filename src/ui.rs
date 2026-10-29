@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use bevy::{app::AppExit, ui::widget::NodeImageMode};
+use bevy::{
+    app::AppExit,
+    ui::widget::NodeImageMode,
+    ui_widgets::{Activate, Button},
+};
 
 use crate::GameState;
 
@@ -10,36 +14,7 @@ impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PreStartup, (load_font, load_graphics))
             .add_systems(OnEnter(GameState::MainMenu), setup)
-            .add_systems(
-                Update,
-                detect_button_presses.run_if(in_state(GameState::MainMenu)),
-            )
             .add_systems(OnExit(GameState::MainMenu), despawn_ui);
-    }
-}
-
-#[derive(Component)]
-enum MainMenuButton {
-    Start,
-    Exit,
-}
-
-fn detect_button_presses(
-    buttons: Query<(&MainMenuButton, &Interaction)>,
-    mut next_state: ResMut<NextState<GameState>>,
-    mut exit: EventWriter<AppExit>,
-) {
-    for button in buttons
-        .iter()
-        .filter(|(_, state)| **state == Interaction::Pressed)
-        .map(|b| b.0)
-    {
-        match button {
-            MainMenuButton::Start => next_state.set(GameState::LoadingLevel),
-            MainMenuButton::Exit => {
-                exit.send(AppExit::Success);
-            }
-        }
     }
 }
 
@@ -47,24 +22,30 @@ fn detect_button_presses(
 struct DespawnOnExit;
 
 fn despawn_ui(mut commands: Commands, to_despawn: Query<Entity, With<DespawnOnExit>>) {
-    to_despawn
-        .iter()
-        .for_each(|e| commands.entity(e).despawn_recursive());
+    to_despawn.iter().for_each(|e| commands.entity(e).despawn());
 }
 
 fn setup(mut commands: Commands, font: Res<FontHandle>, button: Res<ButtonNinePatch>) {
     let start_button = spawn_green_button_with_text(&mut commands, &font, &button, "Start Game");
     let start_button = commands
         .entity(start_button)
-        .insert(MainMenuButton::Start)
+        .insert(Button)
         .insert(Name::new("Start button"))
+        .observe(
+            |_: On<Activate>, mut next_state: ResMut<NextState<GameState>>| {
+                next_state.set(GameState::LoadingLevel);
+            },
+        )
         .id();
 
     let exit_button = spawn_green_button_with_text(&mut commands, &font, &button, "Exit");
     let exit_button = commands
         .entity(exit_button)
-        .insert(MainMenuButton::Exit)
+        .insert(Button)
         .insert(Name::new("Exit button"))
+        .observe(|_: On<Activate>, mut m_exit: MessageWriter<AppExit>| {
+            m_exit.write(AppExit::Success);
+        })
         .id();
 
     commands
@@ -90,34 +71,38 @@ fn spawn_green_button_with_text(
     ninepatch: &Res<ButtonNinePatch>,
     text: &str,
 ) -> Entity {
-    let mut cmd = commands.spawn((
-        Node {
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            margin: UiRect::top(Val::Px(10.0)),
-            padding: UiRect::all(Val::Px(5.0)), // TODO: Improve this padding value.
-            ..default()
-        },
-        ImageNode::new(ninepatch.texture.clone())
-            .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
-        Interaction::None,
-    ));
-
-    cmd.with_children(|builder| {
-        builder.spawn((
-            Text::new(text),
-            TextFont {
-                font: font.0.clone(),
-                font_size: 40.0,
+    commands
+        .spawn((
+            Node {
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                margin: UiRect::top(Val::Px(10.0)),
                 ..default()
             },
-            TextColor(Color::WHITE),
-            TextLayout::new_with_justify(JustifyText::Center),
-            bevy::sprite::Anchor::Center,
-        ));
-    });
-
-    cmd.id()
+            ImageNode::new(ninepatch.texture.clone())
+                .with_mode(NodeImageMode::Sliced(ninepatch.ninepatch.clone())),
+        ))
+        .with_children(|builder| {
+            builder
+                .spawn(Node {
+                    padding: UiRect::all(Val::Px(8.0)),
+                    ..default()
+                })
+                .with_children(|builder| {
+                    builder.spawn((
+                        Text::new(text),
+                        TextFont {
+                            font: FontSource::Handle(font.0.clone()),
+                            font_size: FontSize::Px(40.0),
+                            ..default()
+                        },
+                        TextColor(Color::WHITE),
+                        TextLayout::justify(Justify::Center),
+                        bevy::sprite::Anchor::CENTER,
+                    ));
+                });
+        })
+        .id()
 }
 
 #[derive(Resource)]
@@ -132,10 +117,8 @@ fn load_graphics(mut commands: Commands, asset_server: Res<AssetServer>) {
     let button_ninepatch_texture = asset_server.load("ui/green-button.png");
     let button_ninepatch_slicer = TextureSlicer {
         border: BorderRect {
-            top: 6.0,
-            bottom: 10.0,
-            left: 6.0,
-            right: 6.0,
+            min_inset: (6.0, 6.0).into(),
+            max_inset: (6.0, 10.0).into(),
         },
         ..default()
     };
