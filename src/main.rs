@@ -10,6 +10,7 @@ mod camera;
 mod config;
 mod debug;
 mod ldtk;
+mod networking;
 mod player;
 mod ui;
 mod z_sort;
@@ -64,6 +65,8 @@ fn main() {
             debug::DebugPlugin,
             player::PlayerPlugin,
             ldtk::BombyLdtkPlugin,
+            //networking::NetworkingPlugin::server(3001),
+            networking::NetworkingPlugin::client("127.0.0.1".parse().unwrap(), 3001),
             bomb::BombPlugin,
             camera::CameraPlugin,
             ui::UiPlugin,
